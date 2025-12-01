@@ -94,7 +94,7 @@ The Kova lexer recognizes:
 
 Readable structure representing code before execution.
 
-###  Interpreter
+###  Compiler
 
 Executes AST nodes with predictable evaluation rules.
 
