@@ -1,2 +1,5 @@
 // Define keywords
-const KE
+
+const KEYWORDS = {
+
+}

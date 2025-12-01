@@ -19,6 +19,14 @@ Kova is engineered for:
 
 ##  Features
 
+### ENV Support
+
+Kova supports environment variables via `ENV.KEY`, allowing secure access to configuration values.
+
+### Imports
+
+Kova supports importing modules using `import` statements for modular code.
+
 ### 1. Clean Syntax
 
 Kova uses English‑like expressions that reduce boilerplate:
@@ -58,6 +66,46 @@ Written in **JavaScript**.
 
 ##  Project Structure
 
+##  Environment Variables
+
+Kova can read `.env` files and access variables using the `ENV.KEY` syntax.
+
+Example:
+
+```
+CONNECT mysql USING {
+    host: ENV.DB_HOST,
+    user: ENV.DB_USER,
+    password: ENV.DB_PASS,
+    database: ENV.DB_NAME
+}
+```
+
+##  Imports
+
+Kova supports importing modules using:
+
+```
+import utils from "./utils.kova"
+import { encrypt } from "security"
+```
+
+### Updated Lexer
+
+The lexer recognizes:
+
+* `ENV`
+* `import`
+* `{` and `}` for object literals
+* `.` for ENV access
+* identifiers for module names
+
+Below is the lexer responsibility summary:
+
+* tokenize `ENV.KEY`
+* tokenize import statements
+* tokenize database keywords and operators
+
 A typical Kova compiler/interpreter project:
 
 ```
@@ -79,7 +127,18 @@ kova/
 
 ##  Core Concepts
 
-###  Tokens
+### Updated Tokens
+
+Kova lexer now includes:
+
+* `ENV`
+* `IMPORT`
+* `FROM`
+* `DOT`
+* module identifiers
+* object literal tokens `{` `}`
+
+### ✔ Tokens
 
 The Kova lexer recognizes:
 
@@ -90,17 +149,17 @@ The Kova lexer recognizes:
 * boolean literals: `true`, `false`
 * keywords: `POST`, `GET`, `PUT`, `DELETE`, `save`, `into`, `let`, `if`, `else`
 
-###  AST (Abstract Syntax Tree)
+### ✔ AST (Abstract Syntax Tree)
 
 Readable structure representing code before execution.
 
-###  Compiler
+### ✔ Interpreter
 
 Executes AST nodes with predictable evaluation rules.
 
 ---
 
-##  Example Program
+## 📝 Example Program
 
 ```kova
 let name = "Kova"
@@ -113,7 +172,7 @@ if age == 20 {
 
 ---
 
-##  Building From Source
+## 🔧 Building From Source
 
 Install dependencies:
 
@@ -129,7 +188,7 @@ node src/interpreter.js examples/demo.kova
 
 ---
 
-##  Testing
+## 🧪 Testing
 
 ```
 npm test
@@ -137,7 +196,7 @@ npm test
 
 ---
 
-##  Language Specification
+## 📘 Language Specification
 
 Full spec is located in `docs/language-spec.md`.
 Includes:
@@ -149,13 +208,13 @@ Includes:
 
 ---
 
-##  License
+## 📄 License
 
 MIT License.
 
 ---
 
-##  Logo
+## 🌐 Logo
 
 The official Kova logo uses:
 
@@ -166,12 +225,12 @@ See `/branding` for assets.
 
 ---
 
-##  Contributing
+## 🤝 Contributing
 
 Pull requests are welcome. Open an issue for feature requests or bugs.
 
 ---
 
-##  Contact
+## 💬 Contact
 
 For questions and suggestions, reach out via repository issues.
