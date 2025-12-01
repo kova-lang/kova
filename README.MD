@@ -58,7 +58,7 @@ Kova ships with:
 
 * Tokenizer (lexer)
 * Parser (AST generator)
-* Interpreter/VM
+* Kova v1 is a compiler-only DSL
 
 Written in **JavaScript**.
 
@@ -155,7 +155,7 @@ Readable structure representing code before execution.
 
 ###  Interpreter
 
-Executes AST nodes with predictable evaluation rules.
+Kova v1 is a compiler-only DSL.
 
 ---
 
