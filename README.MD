@@ -138,7 +138,7 @@ Kova lexer now includes:
 * module identifiers
 * object literal tokens `{` `}`
 
-### ✔ Tokens
+###  Tokens
 
 The Kova lexer recognizes:
 
@@ -149,17 +149,17 @@ The Kova lexer recognizes:
 * boolean literals: `true`, `false`
 * keywords: `POST`, `GET`, `PUT`, `DELETE`, `save`, `into`, `let`, `if`, `else`
 
-### ✔ AST (Abstract Syntax Tree)
+###  AST (Abstract Syntax Tree)
 
 Readable structure representing code before execution.
 
-### ✔ Interpreter
+###  Interpreter
 
 Executes AST nodes with predictable evaluation rules.
 
 ---
 
-## 📝 Example Program
+##  Example Program
 
 ```kova
 let name = "Kova"
@@ -172,7 +172,7 @@ if age == 20 {
 
 ---
 
-## 🔧 Building From Source
+##  Building From Source
 
 Install dependencies:
 
@@ -188,7 +188,7 @@ node src/interpreter.js examples/demo.kova
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 ```
 npm test
@@ -196,7 +196,7 @@ npm test
 
 ---
 
-## 📘 Language Specification
+##  Language Specification
 
 Full spec is located in `docs/language-spec.md`.
 Includes:
@@ -208,13 +208,13 @@ Includes:
 
 ---
 
-## 📄 License
+##  License
 
 MIT License.
 
 ---
 
-## 🌐 Logo
+##  Logo
 
 The official Kova logo uses:
 
@@ -225,12 +225,12 @@ See `/branding` for assets.
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 Pull requests are welcome. Open an issue for feature requests or bugs.
 
 ---
 
-## 💬 Contact
+##  Contact
 
 For questions and suggestions, reach out via repository issues.
