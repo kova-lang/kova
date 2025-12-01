@@ -12,7 +12,7 @@ Kova is engineered for:
 * **Built‑in HTTP verbs as keywords** (`POST`, `GET`, `PUT`, `DELETE`)
 * **Database-like keywords** (`save`, `into`)
 * **Zero‑surprise semantics**
-* **Small, embeddable interpreter/VM**
+* **Compiler-only: Kova compiles to JavaScript (Node.js).**
 * **Easy integration with JavaScript environments**
 
 ---
@@ -58,7 +58,7 @@ Kova ships with:
 
 * Tokenizer (lexer)
 * Parser (AST generator)
-* Kova v1 is a compiler-only DSL
+* Interpreter/VM
 
 Written in **JavaScript**.
 
@@ -127,17 +127,6 @@ kova/
 
 ##  Core Concepts
 
-### Updated Tokens
-
-Kova lexer now includes:
-
-* `ENV`
-* `IMPORT`
-* `FROM`
-* `DOT`
-* module identifiers
-* object literal tokens `{` `}`
-
 ###  Tokens
 
 The Kova lexer recognizes:
@@ -147,17 +136,32 @@ The Kova lexer recognizes:
 * strings
 * operators (`+`, `-`, `*`, `/`, `==`, `!=`, `=`, `<`, `>`, `<=`, `>=`)
 * boolean literals: `true`, `false`
-* keywords: `POST`, `GET`, `PUT`, `DELETE`, `save`, `into`, `let`, `if`, `else`
+* keywords: `POST`, `GET`, `PUT`, `DELETE`, `save`, `into`, `let`, `if`, `else`, `CONNECT`, `USING`, `import`, `from`, `ENV`
 
 ###  AST (Abstract Syntax Tree)
 
 Readable structure representing code before execution.
 
-###  Interpreter
+###  Compiler-first runtime model
 
-Kova v1 is a compiler-only DSL.
+Kova v1 is a compiler-first language: source `.kova` files are compiled into idiomatic JavaScript (Express.js) and executed by Node.js. There is no built-in VM or interpreter executing Kova bytecode in v1. Future releases may introduce an optional VM or interpreter.
 
----
+###  Database Driver Plugin Architecture
+
+Kova supports a driver/plugin model for databases. The compiler emits abstract calls to a driver loader which selects the correct adapter for the requested engine (for example: `postgres`, `cockroach`, `mysql`, `sqlite`, `mongodb`, `redis`).
+
+* Syntax example:
+
+```
+CONNECT db USING "postgres"
+```
+
+* The compiler will generate code that calls a driver loader (for example `loadDriver('postgres', config)`), and driver modules implement `save`, `query`, `connect`, `disconnect` operations used by generated code.
+* This plugin model keeps the compiler small and extensible: new drivers are added as separate adapter modules without changing the core compiler.
+
+###  ENV access
+
+Use `ENV.KEY` in Kova to reference environment variables. The compiler injects `dotenv.config()` when ENV usage is detected and emits `process.env.KEY` in generated JS.
 
 ##  Example Program
 
