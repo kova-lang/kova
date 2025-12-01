@@ -1,0 +1,2 @@
+// Define keywords
+const KEY
