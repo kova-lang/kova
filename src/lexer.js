@@ -1,5 +1,1 @@
-// Define keywords
-
-const KEYWORDS = {
-
-}
+// Today we are doing it differntly
