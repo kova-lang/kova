@@ -169,9 +169,8 @@ Use `ENV.KEY` in Kova to reference environment variables. The compiler injects `
 let name = "Kova"
 let age = 2 * 10
 
-if age == 20 {
-  POST "/log" save name into server
-}
+if x == 10:
+    POST "/ok"
 ```
 
 ---
