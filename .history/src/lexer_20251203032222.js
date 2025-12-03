@@ -23,11 +23,5 @@ export default class Lexer {
        }
     };
 
-    skipWhiteSpace(){
-        if(this.currentChar && WHITESPACE_RGX.test(this.currentChar)){
-            this.advance();
-        }
-    }
-
-    
+    skipWhiteSpace()
 };

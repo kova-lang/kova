@@ -28,6 +28,4 @@ export default class Lexer {
             this.advance();
         }
     }
-
-    
 };

@@ -13,21 +13,9 @@ export default class Lexer {
         this.position++;
         this.currentChar = this.currentChar < this.code.length? code[this.position]:null;
     };
-
     peek(){
-       if(this.position + 1 >= this.code.length){
-        return null
+       if(this.position >= this.code.length){
+        
        }
-       else{
-        return code[this.position + 1]
-       }
-    };
-
-    skipWhiteSpace(){
-        if(this.currentChar && WHITESPACE_RGX.test(this.currentChar)){
-            this.advance();
-        }
     }
-
-    
 };
