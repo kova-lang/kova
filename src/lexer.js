@@ -1,1 +1,7 @@
-// Today we are doing it differntly
+// Kova-lexer
+
+// Keywords
+
+const KEYWORD = new Set([
+    
+])
