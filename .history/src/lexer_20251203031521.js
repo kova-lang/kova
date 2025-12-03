@@ -8,12 +8,10 @@ export default class Lexer {
         this.position = 0;
         this.currentChar = input[0];
     }
-    // #### Helper functions ####
+    // h
     advance(){
         this.position++;
         this.currentChar = this.currentChar < this.code.length? code[this.position]:null;
     };
-    peek(){
-       
-    }
+
 };
