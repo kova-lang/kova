@@ -1,7 +1,19 @@
 // Kova-lexer
 
-// Keywords
+import { KEYWORDS, SINGLE_OPS, WHITESPACE_RGX, LETTER_RGX, NUMBER_RGX  } from "../lib/constants/store";
 
-const KEYWORD = new Set([
-    
-])
+export default class Lexer {
+    constructor(code){
+        this.code = code;
+        this.position = 0;
+        this.currentChar = input[0];
+    }
+    // #### Helper functions ####
+    advance(){
+        this.position++;
+        this.currentChar = this.currentChar < this.code.length? code[this.position]:null;
+    };
+    peek(){
+       
+    }
+};
