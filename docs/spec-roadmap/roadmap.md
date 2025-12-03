@@ -1,0 +1,349 @@
+# **KOVA ROADMAP: v1 → v3**
+
+---
+
+#  **KOVA v1 – The Foundation (MVP DSL + Compiler to JS)**
+
+Timeline: 2–3 months
+Goal: Build a fully working backend DSL that compiles to JavaScript and supports CRUD + DB + HTTP endpoints.
+
+---
+
+## **Core Objectives**
+
+### **1. Lexer & Parser (Stable Grammar)**
+
+* Complete keyword set:
+  `GET, POST, PUT, DELETE, CONNECT, USING, SELECT, INSERT, UPDATE, DELETE, WHERE, SAVE, INTO, RESPOND, LIMIT, ORDER_BY`
+* Support:
+
+  * identifiers
+  * strings
+  * numbers
+  * booleans
+  * comparison operators
+  * brace-based blocks
+  * JSON-like objects
+* Reserved keywords for v2/v3: `CACHE, SOCKET, TASK, WORKER, AUTH`.
+
+### **2. AST Design (Deterministic & Documented)**
+
+* Endpoint node
+* DB query node
+* Condition node
+* Response node
+* Limit/order nodes
+* Blocks represented as `BlockNode` (not indentation)
+
+### **3. Compiler to JavaScript**
+
+Kova → JS (Node.js):
+
+* Express-style routing
+* Automatic async handling
+* DB driver mapping
+* ENV access
+* Error handling insertion
+* Import/Module resolution
+* Basic optimization (constant folding)
+
+### **4. Database Drivers (Plugin System)**
+
+Support:
+
+* PostgreSQL
+* MySQL
+* CockroachDB
+* MongoDB
+* Redis
+
+Design a **driver interface**:
+
+```js
+registerDriver("postgres", {
+  connect(config) {},
+  select(queryAst) {},
+  insert(queryAst) {},
+});
+```
+
+Drivers live outside core—future-proof.
+
+### **5. Kova Standard Runtime Layer**
+
+* Auto-created folder structure on compile
+* Routing index
+* DB registry
+* Config loader
+* Project scaffold CLI
+
+### **6. Developer Tooling**
+
+* `kova init`
+* `kova build`
+* `kova run`
+* Source maps pointing Kova → JS
+* Basic error messages
+
+---
+
+# **KOVA v1 Deliverables**
+
+* Fully working REST backend
+* Able to hit real databases
+* Auto-converted to clean JS
+* Can deploy on any Node.js platform
+* Basic official documentation + examples
+
+v1 is about **building a working, predictable DSL**.
+
+---
+
+#  **KOVA v2 – Power Features, Real-Time, Caching, Tasks**
+
+Timeline: 6–8 months
+Goal: Move from “simple DSL” to “backend automation language”.
+
+---
+
+## **1. Caching Layer**
+
+Introduce:
+
+```
+CACHE users_cache {
+    key: "user:{id}"
+    ttl: 60
+    get: SELECT * FROM users WHERE id = $id
+}
+```
+
+Compiler generates Redis-based caching logic.
+
+Features:
+
+* redis driver integration
+* “cache-first”, “cache-only”, “revalidate” modes
+
+---
+
+## **2. WebSockets (SOCKET keyword)**
+
+```
+SOCKET chat {
+    on connect {
+        respond "connected"
+    }
+    on message(msg) {
+        broadcast msg
+    }
+}
+```
+
+* Compiles to socket.io or ws
+* Supports broadcast, rooms, presence
+
+---
+
+## **3. Background Jobs & Workers**
+
+```
+TASK send_email every 10m {
+    // code
+}
+```
+
+* Cron-like syntax
+* Worker threads
+* Retry queues
+* Dead-letter queues
+* Redis-backed
+
+---
+
+## **4. Authentication Layer**
+
+A simple DSL:
+
+```
+AUTH jwt USING SECRET("JWT_KEY") {
+    expire: "1h"
+}
+```
+
+Auto-generates:
+
+* middleware
+* token signing
+* token verification
+
+---
+
+## **5. Schema & Validation DSL**
+
+Integrated validation:
+
+```
+VALIDATE userBody {
+    name: string
+    age: number
+    email: email
+}
+```
+
+Compiler → Yup/Zod/own validator.
+
+---
+
+## **6. Improved Developer Tools**
+
+* Kova language server (VSCode plugin)
+* Syntax highlighting
+* Auto formatting
+* Static error analysis
+* Type inference (partial)
+
+---
+
+## **7. Ecosystem Foundation**
+
+* Standard library (utils, crypto, http)
+* Template projects
+* Official driver packages
+
+---
+
+# **KOVA v2 Deliverables**
+
+* Real-time backends
+* Automated caching
+* Background workers
+* Schema validation
+* JWT authentication
+* Strong tooling & plugins
+
+v2 elevates Kova to **industry startup-ready**.
+
+---
+
+#  **KOVA v3 – The High-Performance Runtime & True VM**
+
+Timeline: 12–18 months
+Goal: Move from "Kova that compiles to JS" → "Kova with its own high-speed VM & bytecode".
+
+This is when Kova becomes **truly industry-grade** like Bun, Deno, Go.
+
+---
+
+## **1. Kova Native VM (Bytecode Execution Engine)**
+
+### Why?
+
+* JS compilation is not enough for enterprise scale
+* We need a predictable execution model
+* Performance optimization beyond JS
+* Lower runtime overhead
+
+### Architecture:
+
+* Lexer → Parser → AST → Bytecode
+* Bytecode executed by Kova VM
+* JIT compilation (later)
+* Inlined operations
+* Fiber-based concurrency model
+
+### Features:
+
+* Zero-cost async
+* Fast RPC
+* Custom memory management
+* Isolation contexts for security
+* Sandboxed execution for multi-tenancy
+
+---
+
+## **2. Native DB Layer (No JS Drivers Anymore)**
+
+Instead of Node.js DB drivers, Kova will have:
+
+* Native postgres protocol driver
+* Native redis protocol
+* Native HTTP client
+* Native WebSocket server
+
+This makes Kova **extremely fast**.
+
+---
+
+## **3. Custom Package Manager**
+
+Like npm but simpler:
+
+```
+kpm install kova-mongo
+```
+
+* Package locking
+* Versioning
+* Precompiled bytecode distribution
+
+---
+
+## **4. Hot Reloading Runtime (HMR)**
+
+Live reload built into the VM.
+
+---
+
+## **5. Parallel Execution Model**
+
+Introduce lightweight threads:
+
+```
+spawn {
+    // runs in parallel
+}
+```
+
+* Uses fibers/goroutines
+* Shared-nothing concurrency
+* Channels for communication
+
+---
+
+## **6. Kova Cloud Runtime (Optional)**
+
+A “serverless optimized” execution mode:
+
+* auto-scaling handlers
+* cold-start reduction
+* integrated logging
+* metrics dashboard
+
+Not mandatory, but allows monetization similar to Vercel/Netlify.
+
+---
+
+# **KOVA v3 Deliverables**
+
+* Kova has its own VM (no JS dependency)
+* Native performance comparable to Go/Bun
+* True parallelism
+* Native drivers
+* Industry-grade runtime
+
+v3 transforms Kova into a **real programming language**, not just a DSL.
+
+---
+
+# **FULL SUMMARY**
+
+| Version | Goal                            | Key Features                                          |
+| ------- | ------------------------------- | ----------------------------------------------------- |
+| **v1**  | Working DSL that compiles to JS | HTTP, DB, ENV, imports, respond, limit, order_by      |
+| **v2**  | Production backend automation   | caching, websockets, tasks, auth, validation, tooling |
+| **v3**  | High-performance language       | custom VM, bytecode, native drivers, parallelism      |
+
+---
+
+
