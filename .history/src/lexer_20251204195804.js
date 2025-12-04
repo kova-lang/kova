@@ -11,7 +11,7 @@ export default class Lexer {
     // #### Helper functions ####
     advance(){
         this.position++;
-        this.currentChar = this.position < this.code.length? this.code[this.position]:null;
+        this.currentChar = this.position < this.code.length? code[this.position]:null;
     };
 
     peek(){
@@ -45,9 +45,7 @@ export default class Lexer {
             string += this.currentChar;
             this.advance();
         }
-        if(this.currentChar !== '"'){
-            throw new Error('Expected ["] at the closing of the string value ')
-        }
+        if(this.currentChar !== )
         this.advance();
         return {type:"STRING", value:string}
     }
@@ -139,12 +137,12 @@ export default class Lexer {
                 continue;
             }
             // #### Check for string ####
-            if(this.currentChar === '"'){
+            if(this.current === '"'){
                 tokens.push(this.readString())
                 continue;
             }
             // #### Check for Identifier or keywords ####
-            if (LETTER_RGX.test(this.currentChar)) {
+            if (LETTER_RGX.test(this.current)) {
                 tokens.push(this.readIdentifierOrKeyword());
                 continue;
             }
@@ -159,7 +157,7 @@ export default class Lexer {
                 continue;
             }
             // if char does not match any ####
-            throw new Error(`Unexpected character: ${this.currentChar}`);
+            throw new Error(`Unexpected character: ${this.current}`);
         }
         tokens.push({ type: "EOF", value: null });
         return tokens;

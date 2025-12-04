@@ -11,7 +11,7 @@ export default class Lexer {
     // #### Helper functions ####
     advance(){
         this.position++;
-        this.currentChar = this.position < this.code.length? this.code[this.position]:null;
+        this.currentChar = this.position < this.code.length? code[this.position]:null;
     };
 
     peek(){
@@ -139,12 +139,12 @@ export default class Lexer {
                 continue;
             }
             // #### Check for string ####
-            if(this.currentChar === '"'){
+            if(this.current === '"'){
                 tokens.push(this.readString())
                 continue;
             }
             // #### Check for Identifier or keywords ####
-            if (LETTER_RGX.test(this.currentChar)) {
+            if (LETTER_RGX.test(this.currentCha)) {
                 tokens.push(this.readIdentifierOrKeyword());
                 continue;
             }
