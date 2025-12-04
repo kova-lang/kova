@@ -1,6 +1,6 @@
 // #### Kova-lexer ####
 import { KEYWORDS, SINGLE_OPS, PSYMBOLS} from "../lib/constants/store";
-import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX,OP_RGX } from "../lib/regex";
+import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX } from "../lib/regex";
 
 export default class Lexer {
     constructor(code){
@@ -115,15 +115,6 @@ export default class Lexer {
         }
         return null;    
     }
-    readProgramSymbols(){
-        if(this.currentChar && PSYMBOLS[this.currentChar]){
-            let value = this.currentChar;
-            let type = PSYMBOLS[this.currentChar];
-            this.advance();
-            return {type, value}
-        }
-        return null;
-    }
     tokenize(){
         const tokens = [];
         while(this.currentChar !== null){
@@ -145,20 +136,7 @@ export default class Lexer {
                 tokens.push(this.readIdentifierOrKeyword());
                 continue;
             }
-            // #### Check for operator ####
-            if(OP_RGX.test(this.currentChar)){
-                tokens.push(this.readOperator())
-                continue;
-            }
-            //Check for other programming symbols
-            if(PSYMBOLS[this.currentChar]){
-                tokens.push(this.readProgramSymbols())
-                continue;
-            }
-            // if char does not match any ####
-            throw new Error(`Unexpected character: ${this.current}`);
+            // 
         }
-        tokens.push({ type: "EOF", value: null });
-        return tokens;
     }
 }        

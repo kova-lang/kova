@@ -148,13 +148,8 @@ export default class Lexer {
             // #### Check for operator ####
             if(OP_RGX.test(this.currentChar)){
                 tokens.push(this.readOperator())
-                continue;
             }
-            //Check for other programming symbols
-            if(PSYMBOLS[this.currentChar]){
-                tokens.push(this.readProgramSymbols())
-                continue;
-            }
+            
             // if char does not match any ####
             throw new Error(`Unexpected character: ${this.current}`);
         }

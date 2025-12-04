@@ -11,7 +11,8 @@ export default class Lexer {
     // #### Helper functions ####
     advance(){
         this.position++;
-        this.currentChar = this.position < this.code.length? code[this.position]:null;
+        this.currentChar = t
+  ")": "RPAREN"his.position < this.code.length? code[this.position]:null;
     };
 
     peek(){
@@ -115,15 +116,6 @@ export default class Lexer {
         }
         return null;    
     }
-    readProgramSymbols(){
-        if(this.currentChar && PSYMBOLS[this.currentChar]){
-            let value = this.currentChar;
-            let type = PSYMBOLS[this.currentChar];
-            this.advance();
-            return {type, value}
-        }
-        return null;
-    }
     tokenize(){
         const tokens = [];
         while(this.currentChar !== null){
@@ -148,13 +140,8 @@ export default class Lexer {
             // #### Check for operator ####
             if(OP_RGX.test(this.currentChar)){
                 tokens.push(this.readOperator())
-                continue;
             }
-            //Check for other programming symbols
-            if(PSYMBOLS[this.currentChar]){
-                tokens.push(this.readProgramSymbols())
-                continue;
-            }
+
             // if char does not match any ####
             throw new Error(`Unexpected character: ${this.current}`);
         }

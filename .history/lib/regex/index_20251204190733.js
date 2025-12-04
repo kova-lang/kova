@@ -3,4 +3,4 @@
 export const WHITESPACE_RGX = /\S/;
 export const NUMBER_RGX = /[0-9]/;
 export const LETTER_RGX = /[A-Za-z_]/;
-export const OP_RGX = /[=<>!&|+-*]/;
+export const OP_R

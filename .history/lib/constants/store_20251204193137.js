@@ -43,8 +43,7 @@ export const PSYMBOLS = {
   "}": "RBRACE",
   "(": "LPAREN",
   ")": "RPAREN",
-  ",":"COMMA",
-  ":":"COLON",
+  ",":"C"
 };
 
 

@@ -44,7 +44,6 @@ export const PSYMBOLS = {
   "(": "LPAREN",
   ")": "RPAREN",
   ",":"COMMA",
-  ":":"COLON",
 };
 
 

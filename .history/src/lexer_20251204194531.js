@@ -153,7 +153,7 @@ export default class Lexer {
             //Check for other programming symbols
             if(PSYMBOLS[this.currentChar]){
                 tokens.push(this.readProgramSymbols())
-                continue;
+                continue
             }
             // if char does not match any ####
             throw new Error(`Unexpected character: ${this.current}`);

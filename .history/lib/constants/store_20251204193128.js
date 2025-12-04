@@ -42,9 +42,7 @@ export const PSYMBOLS = {
   "{": "LBRACE",
   "}": "RBRACE",
   "(": "LPAREN",
-  ")": "RPAREN",
-  ",":"COMMA",
-  ":":"COLON",
+  ")": "RPAREN"
 };
 
 
