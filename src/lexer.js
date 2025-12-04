@@ -113,7 +113,9 @@ export default class Lexer {
             this.advance();
             return {type, value}
         }
+        return null;    
     }
+    tokenize(){
 
-
+    }
 }        
