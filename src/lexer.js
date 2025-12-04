@@ -6,12 +6,12 @@ export default class Lexer {
     constructor(code){
         this.code = code;
         this.position = 0;
-        this.currentChar = input[0];
+        this.currentChar = code[0];
     }
     // #### Helper functions ####
     advance(){
         this.position++;
-        this.currentChar = this.position < this.code.length? code[this.position]:null;
+        this.currentChar = this.position < this.code.length? this.code[this.position]:null;
     };
 
     peek(){
@@ -24,7 +24,7 @@ export default class Lexer {
     };
 
     skipWhiteSpace(){
-        if(this.currentChar && WHITESPACE_RGX.test(this.currentChar)){
+        while(this.currentChar && WHITESPACE_RGX.test(this.currentChar)){
             this.advance();
         }
     }
@@ -45,6 +45,9 @@ export default class Lexer {
             string += this.currentChar;
             this.advance();
         }
+        if(this.currentChar !== '"'){
+            throw new Error('Expected ["] at the closing of the string value ')
+        }
         this.advance();
         return {type:"STRING", value:string}
     }
@@ -54,14 +57,14 @@ export default class Lexer {
         if(this.currentChar && !LETTER_RGX.test(this.currentChar)){
             throw new Error("A number type cannot start IDENTIFIER name")
         }
-        while(this.current && LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar)){
+        while(this.currentChar && LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar)){
             text += this.currentChar;
             this.advance();
         }
         // #### in the case where by text string collected == order ####
         if(this.currentChar && text === "order" && this.currentChar === "_"){
-            while(this.current && LETTER_RGX.test(this.currentChar)){
-                test += this.currentChar;
+            while(this.currentChar && LETTER_RGX.test(this.currentChar)){
+                text += this.currentChar;
                 this.advance();
             }
         }
@@ -75,33 +78,33 @@ export default class Lexer {
 
     readOperator(){
         // #### Comparison ####
-        if(this.current === "=" && this.peek() === "=") {
+        if(this.currentChar === "=" && this.peek() === "=") {
             this.advance();
             this.advance();
             return { type: "EQ", value: "==" };
         }
-        if(this.current === "!" && this.peek() === "=") {
+        if(this.currentChar === "!" && this.peek() === "=") {
             this.advance();
             this.advance();
             return { type: "NEQ", value: "!=" };
         }
-        if(this.current === "<" && this.peek() === "=") {
+        if(this.currentChar === "<" && this.peek() === "=") {
             this.advance();
             this.advance();
             return { type: "LTEQ", value: "<=" };
         }
-        if(this.current === ">" && this.peek() === "=") {
+        if(this.currentChar === ">" && this.peek() === "=") {
             this.advance();
             this.advance();
             return { type: "GTEQ", value: ">=" };
         }
         // #### Logical operators ####
-        if(this.current === "&" && this.peek() === "&") {
+        if(this.currentChar === "&" && this.peek() === "&") {
             this.advance(); 
             this.advance();
             return { type: "AND", value: "&&" };
         }
-        if(this.current === "|" && this.peek() === "|") {
+        if(this.currentChar === "|" && this.peek() === "|") {
             this.advance(); 
             this.advance();
             return { type: "OR", value: "||" };
@@ -136,12 +139,12 @@ export default class Lexer {
                 continue;
             }
             // #### Check for string ####
-            if(this.current === '"'){
+            if(this.currentChar === '"'){
                 tokens.push(this.readString())
                 continue;
             }
             // #### Check for Identifier or keywords ####
-            if (LETTERS.test(this.current)) {
+            if (LETTER_RGX.test(this.currentChar)) {
                 tokens.push(this.readIdentifierOrKeyword());
                 continue;
             }
@@ -156,7 +159,7 @@ export default class Lexer {
                 continue;
             }
             // if char does not match any ####
-            throw new Error(`Unexpected character: ${this.current}`);
+            throw new Error(`Unexpected character: ${this.currentChar}`);
         }
         tokens.push({ type: "EOF", value: null });
         return tokens;
