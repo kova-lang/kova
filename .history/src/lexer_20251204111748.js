@@ -1,4 +1,4 @@
-// #### Kova-lexer ####
+// #### Kova-lexer
 import { KEYWORDS, SINGLE_OPS, PSYMBOLS} from "../lib/constants/store";
 import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX } from "../lib/regex";
 
