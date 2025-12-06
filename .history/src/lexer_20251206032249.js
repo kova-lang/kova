@@ -70,8 +70,8 @@ export default class Lexer {
         if(text && KEYWORDS[text]){
         // #### boolean literals as keywords too (explicit token)
             if (text === "true" || text === "false") {
-                return { type: "BOOLEAN", value: text === "true" };
-            }
+        return { type: "BOOLEAN", value: text === "true" };
+        }
             return {type:KEYWORDS[text], value:text}
         }
         // #### return identifier 

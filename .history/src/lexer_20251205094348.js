@@ -55,23 +55,22 @@ export default class Lexer {
         if(this.currentChar && !LETTER_RGX.test(this.currentChar)){
             throw new Error("A number type cannot start IDENTIFIER name")
         }
-        while ( this.currentChar && (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))){
+        while (
+    this.currentChar &&
+    (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))
+){
             text += this.currentChar;
             this.advance();
         }
         // #### in the case where by text string collected == order ####
-        // if(this.currentChar && text === "order" && this.currentChar === "_"){
-        //     while(this.currentChar && LETTER_RGX.test(this.currentChar)){
-        //         text += this.currentChar;
-        //         this.advance();
-        //     }
-        // }
+        if(this.currentChar && text === "order" && this.currentChar === "_"){
+            while(this.currentChar && LETTER_RGX.test(this.currentChar)){
+                text += this.currentChar;
+                this.advance();
+            }
+        }
         // #### Filter for keywords first [case-sensitive] ####
         if(text && KEYWORDS[text]){
-        // #### boolean literals as keywords too (explicit token)
-            if (text === "true" || text === "false") {
-                return { type: "BOOLEAN", value: text === "true" };
-            }
             return {type:KEYWORDS[text], value:text}
         }
         // #### return identifier 
