@@ -129,14 +129,64 @@ kova/
 
 ###  Tokens
 
-The Kova lexer recognizes:
+The Kova lexer recognizes the following token categories:
+
+#### Keywords (v1 – frozen)
+
+**Runtime**
+
+* `let`
+* `import`
+* `from`
+* `env`
+* `respond`
+
+**HTTP**
+
+* `GET`
+* `POST`
+* `PUT`
+* `DELETE`
+
+**Database / Query**
+
+* `find`
+* `insert`
+* `update`
+* `delete`
+* `into`
+* `set`
+* `where`
+* `limit`
+* `order_by`
+* `asc`
+* `desc`
+
+**Connection**
+
+* `CONNECT`
+* `USING`
+
+**Literals**
+
+* `true`
+* `false`
+
+**Control (minimal)**
+
+* `if`
+* `else`
+
+---
+
+#### Other tokens
 
 * identifiers
 * numbers
 * strings
-* operators (`+`, `-`, `*`, `/`, `==`, `!=`, `=`, `<`, `>`, `<=`, `>=`)
-* boolean literals: `true`, `false`
-* keywords: `POST`, `GET`, `PUT`, `DELETE`, `save`, `into`, `let`, `if`, `else`, `CONNECT`, `USING`, `import`, `from`, `ENV`
+* operators (`+`, `-`, `*`, `/`, `==`, `!=`, `=`, `<`, `>`, `<=`, `>=`, `&&`, `||`)
+* punctuation (`{`, `}`, `(`, `)`, `,`, `:`)
+* ENV access via `ENV.KEY`
 
 ###  AST (Abstract Syntax Tree)
 
@@ -153,41 +203,26 @@ Kova supports a driver/plugin model for databases. The compiler emits abstract c
 * Syntax example:
 
 ```
-find users where age >= 18 && status == "active" order_by age desc
+CONNECT db USING "postgres"
 ```
 
----
+* The compiler will generate code that calls a driver loader (for example `loadDriver('postgres', config)`), and driver modules implement `save`, `query`, `connect`, `disconnect` operations used by generated code.
+* This plugin model keeps the compiler small and extensible: new drivers are added as separate adapter modules without changing the core compiler.
 
-# **How this compiles (Postgres example)**
+###  ENV access
 
-### Kova:
+Use `ENV.KEY` in Kova to reference environment variables. The compiler injects `dotenv.config()` when ENV usage is detected and emits `process.env.KEY` in generated JS.
 
+##  Example Program
+
+```kova
+let name = "Kova"
+let age = 2 * 10
+
+if age == 20 {
+  POST "/log" save name into server
+}
 ```
-find users where age > 18 limit 5 order_by created_at desc
-```
-
-### JS Output:
-
-```js
-const result = await db.users.find({
-  where: { age: { $gt: 18 } },
-  limit: 5,
-  orderBy: { created_at: "desc" }
-});
-```
-
----
-
-# **How this compiles (MongoDB example)**
-
-```js
-const result = await db.users.find({
-  age: { $gt: 18 }
-})
-.limit(5)
-.sort({ created_at: -1 });
-```
-
 
 ---
 
