@@ -29,5 +29,32 @@ runLexerTest(
 // Test 3: Arithmetic operations
 runLexerTest(
     "math expression",
-    "let sum = a + b - c * d / e % f;"
+    "let sum = a + b - c * d / e % f"
+);
+
+// Test 4: Boolean Literals
+runLexerTest(
+    "boolean literals",
+    `let isActive = true
+     let isAdmin = false`
+);
+
+// Test 5: String Handling
+runLexerTest(
+    "string handling",
+    `let greeting = "Hello, World!"`
+);
+
+// Test 6: comparison operators
+runLexerTest(
+    "comparison operators",
+       `if x == 10
+     if y != 5
+     if z >= 1
+     if a <= 9`);
+     
+// Test 7: Logical operators
+runLexerTest(
+    "logical operators",
+    `if a == 1 && b == 2 || c == 3`
 );
