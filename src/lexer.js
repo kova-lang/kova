@@ -1,41 +1,49 @@
 // #### Kova-lexer ####
-import { KEYWORDS, SINGLE_OPS, PSYMBOLS} from "../lib/constants/store";
-import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX,OP_RGX } from "../lib/regex";
+import { KEYWORDS, SINGLE_OPS, PSYMBOLS, MULTI_OPS} from "../lib/constants/store.js";
+import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX,OP_RGX } from "../lib/regex/index.js";
 
 export default class Lexer {
     constructor(code){
-        this.code = code;
-        this.position = 0;
-        this.currentChar = code[0];
+        this.code = code || ""; // The source code to be tokenized
+        this.position = 0; // Current position in the source code 
+        this.currentChar = this.code.length ? this.code[0] : null; // Current character being analyzed
     }
-    // #### Helper functions ####
+
+    // Move to the next character in the source code 
     advance(){
         this.position++;
         this.currentChar = this.position < this.code.length? this.code[this.position]:null;
     };
-
+    // Lookahead function to peek at the next character without adavcning the position
     peek(){
        if(this.position + 1 >= this.code.length){
         return null
        }
         return this.code[this.position + 1] 
     };
-
+    
+    // Skip whitespace characaters 
     skipWhiteSpace(){
         while(this.currentChar && WHITESPACE_RGX.test(this.currentChar)){
             this.advance();
         }
     }
-
+    //  Read a number token from the source code
     readNumber(){
         let number = "";
         while(this.currentChar && NUMBER_RGX.test(this.currentChar)) {
             number += this.currentChar;
             this.advance();
         }
+        // INVALID: number immediately followed by identifier start
+        if (this.currentChar && LETTER_RGX.test(this.currentChar)) {
+            throw new Error(
+            `Invalid identifier: identifiers cannot start with a number (${number}${this.currentChar}...)`
+        );
+    }
         return {type:"NUMBER", value:Number(number)}
     }
-
+    // Read a string token from the source code
     readString(){
         let string =""
         this.advance();
@@ -50,28 +58,21 @@ export default class Lexer {
         return {type:"STRING", value:string}
     }
 
+    // Read an identifier or keyword from the source code
     readIdentifierOrKeyword(){
         let text = "";
-        if(this.currentChar && !LETTER_RGX.test(this.currentChar)){
-            throw new Error("A number type cannot start IDENTIFIER name")
-        }
+        
         while ( this.currentChar && (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))){
             text += this.currentChar;
             this.advance();
         }
-        // #### in the case where by text string collected == order ####
-        // if(this.currentChar && text === "order" && this.currentChar === "_"){
-        //     while(this.currentChar && LETTER_RGX.test(this.currentChar)){
-        //         text += this.currentChar;
-        //         this.advance();
-        //     }
-        // }
-        // #### Filter for keywords first [case-sensitive] ####
-        if(text && KEYWORDS[text]){
-        // #### boolean literals as keywords too (explicit token)
-            if (text === "true" || text === "false") {
+        // #### check if the text is a boolean ####
+        if (text === "true" || text === "false") {
                 return { type: "BOOLEAN", value: text === "true" };
-            }
+        }
+        // #### check if the text is a keyword ####
+        if(text && KEYWORDS[text]){
+      
             return {type:KEYWORDS[text], value:text}
         }
         // #### return identifier 
@@ -79,38 +80,16 @@ export default class Lexer {
     }
 
     readOperator(){
-        // #### Comparison ####
-        if(this.currentChar === "=" && this.peek() === "=") {
+        const twoCharOp = this.currentChar + this.peek();
+        // #### Check for multiple operators ####
+        if(MULTI_OPS[twoCharOp]){
+            let value = twoCharOp;
+            let type = MULTI_OPS[twoCharOp];
             this.advance();
             this.advance();
-            return { type: "EQ", value: "==" };
+            return {type, value}
         }
-        if(this.currentChar === "!" && this.peek() === "=") {
-            this.advance();
-            this.advance();
-            return { type: "NEQ", value: "!=" };
-        }
-        if(this.currentChar === "<" && this.peek() === "=") {
-            this.advance();
-            this.advance();
-            return { type: "LTEQ", value: "<=" };
-        }
-        if(this.currentChar === ">" && this.peek() === "=") {
-            this.advance();
-            this.advance();
-            return { type: "GTEQ", value: ">=" };
-        }
-        // #### Logical operators ####
-        if(this.currentChar === "&" && this.peek() === "&") {
-            this.advance(); 
-            this.advance();
-            return { type: "AND", value: "&&" };
-        }
-        if(this.currentChar === "|" && this.peek() === "|") {
-            this.advance(); 
-            this.advance();
-            return { type: "OR", value: "||" };
-        }
+       
         // #### Single operators ####
         if(SINGLE_OPS[this.currentChar]){
             let value = this.currentChar;
@@ -135,6 +114,7 @@ export default class Lexer {
             
             // #### Check for space ####
             this.skipWhiteSpace();
+            if (this.currentChar === null) break;
             // #### Check for number ####
             if(NUMBER_RGX.test(this.currentChar)){
                 tokens.push(this.readNumber())
@@ -152,7 +132,11 @@ export default class Lexer {
             }
             // #### Check for operator ####
             if(OP_RGX.test(this.currentChar)){
-                tokens.push(this.readOperator())
+                const opToken = this.readOperator();
+                if(!opToken){
+                    throw new Error(`Unexpected operator sequence: ${this.currentChar}`);
+                }
+                tokens.push(opToken);
                 continue;
             }
             //Check for other programming symbols

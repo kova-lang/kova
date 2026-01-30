@@ -58,3 +58,18 @@ runLexerTest(
     "logical operators",
     `if a == 1 && b == 2 || c == 3`
 );
+
+// Test 8: braces and Programming Symbols
+runLexerTest(
+    "program symbols",
+    `{ ( ) , : }`
+);
+
+// Test 9: String literals
+runLexerTest("string literals", `let name = "Kova"`);
+
+// Test 10: Edge case - invalid tokens
+runLexerTest("invalid identifier", `let 1user = 10`);
+runLexerTest("number followed by identifier", `let x = 123abc`);
+runLexerTest("unterminated string", `let x = "oops`);
+runLexerTest("invalid character", `let x = 10 @ 2`);
