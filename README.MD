@@ -131,7 +131,7 @@ kova/
 
 The Kova lexer recognizes the following token categories:
 
-#### Keywords (v1 – frozen)
+#### Keywords (v1)
 
 **Runtime**
 
