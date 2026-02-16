@@ -22,12 +22,40 @@ export default class Lexer {
         return this.code[this.position + 1] 
     };
     
-    // Skip whitespace characaters 
-    skipWhiteSpace(){
-        while(this.currentChar && WHITESPACE_RGX.test(this.currentChar)){
+    // Unified skip for whitespace and comments
+skipIgnorable() {
+    while (this.currentChar !== null) {
+
+        // Skip spaces, tabs, carriage returns, newlines
+        if (this.currentChar === " " || this.currentChar === "\t" || this.currentChar === "\r" || this.currentChar === "\n") {
             this.advance();
+            continue;
         }
+
+        // Skip hash-style comment
+        if (this.currentChar === "#") {
+            this.advance(); // skip '#'
+            while (this.currentChar !== "\n" && this.currentChar !== null) {
+                this.advance(); // skip comment content
+            }
+            continue; // will skip newline on next iteration
+        }
+
+        // Skip double-slash comment
+        if (this.currentChar === "/" && this.peek() === "/") {
+            this.advance(); // skip first '/'
+            this.advance(); // skip second '/'
+            while (this.currentChar !== "\n" && this.currentChar !== null) {
+                this.advance(); // skip comment content
+            }
+            continue; // newline will be skipped in next iteration
+        }
+
+        // If none of the above, stop skipping
+        break;
     }
+}
+
     //  Read a number token from the source code
     readNumber(){
         let number = "";
@@ -112,8 +140,10 @@ export default class Lexer {
         const tokens = [];
         while(this.currentChar !== null){
             
-            // #### Check for space ####
-            this.skipWhiteSpace();
+            // #### Check Ignorables ####
+            this.skipIgnorable()
+            if (this.currentChar === null) break;
+    
             if (this.currentChar === null) break;
             // #### Check for number ####
             if(NUMBER_RGX.test(this.currentChar)){
@@ -139,12 +169,12 @@ export default class Lexer {
                 tokens.push(opToken);
                 continue;
             }
-            //Check for other programming symbols
+            // #### Check for other programming symbols ####
             if(PSYMBOLS[this.currentChar]){
                 tokens.push(this.readProgramSymbols())
                 continue;
             }
-            // if char does not match any ####
+            // #### if char does not match any ####
             throw new Error(`Unexpected character: ${this.currentChar}`);
         }
         tokens.push({ type: "EOF", value: null });

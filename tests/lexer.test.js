@@ -73,3 +73,12 @@ runLexerTest("invalid identifier", `let 1user = 10`);
 runLexerTest("number followed by identifier", `let x = 123abc`);
 runLexerTest("unterminated string", `let x = "oops`);
 runLexerTest("invalid character", `let x = 10 @ 2`);
+
+// Test 11: comments
+runLexerTest("comments", "# This is a comment \n let x = 10 \n // Another comment");
+
+// Test 12: imports
+runLexerTest("Imports", `import math from "lib/math.kova"`);
+
+// Test 13: Environment variables
+runLexerTest("Environment Variables", `ENV.DB_HOST`);
