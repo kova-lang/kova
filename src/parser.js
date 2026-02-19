@@ -2,28 +2,37 @@
 
 // #### main parser class ####
 export default class Parser {
-    constructor(lexer) {
-        this.lexer = lexer;
-        this.currentPos = lexer.length ? 0 : -1;
-        this.currentToken = lexer.length ? lexer[0] : null;
+    constructor() {
+        this.tokens = [];
+        this.currentPos = 0
+        this.currentToken = this.tokens? this.tokens[0] : null;
     }
 
     // #### Advance to the next token in the token stream ####
     advance() {
         this.currentPos++;
-        this.currentToken = this.currentPos < this.lexer.length ? this.lexer[this.currentPos] : null;
+        if (this.currentPos < this.tokens.length){
+            this.currentToken = this.tokens[this.currentPos];
+        }
+       else{
+            this.currentToken = {type: "EOF"}
+       }
     }
 
     // #### Expect a specific token type and advance if it matches, otherwise throw an error ####
     expect(type) {
-        if (this.currentToken === null || this.currentToken !== type) {
-            throw new Error(`Expected ${type} but got ${this.currentToken.type}`)
+        if (!this.currentToken  || this.currentToken.type !== type) {
+            throw new Error(`Expected ${type} but got ${this.currentToken.type? this.currentToken.type : "null"}`)
         }
         this.advance();
     };
 
     // #### parse program ####
-    parseProgram() {
+    parseProgram(tokens) {
+        this.tokens = tokens;
+        this.currentPos = 0
+        this.currentToken = this.tokens? this.tokens[0] : null;
+
         const body = [];
 
         while (this.currentToken.type !== "EOF") {
@@ -278,7 +287,7 @@ export default class Parser {
         return left;
     }
 
-    // #### pARSE UNARY
+    // #### parse unary  - || !
     parseUnary() {
         if (
             this.currentToken.type === "BANG" ||
@@ -299,7 +308,7 @@ export default class Parser {
         return this.parsePrimary();
     }
 
-    // #### pRIMARY THE BASE  layer
+    // #### Primary - base layer
     parsePrimary() {
         const token = this.currentToken;
 
