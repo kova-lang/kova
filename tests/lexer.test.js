@@ -1,6 +1,6 @@
 import Lexer from "../src/lexer.js";
 
-function runLexerTest(name, code) {
+export function runLexerTest(name, code) {
     console.log(`\n=== TEST: ${name} ===`);
     console.log(code);
     console.log("TOKENS:");
@@ -9,8 +9,10 @@ function runLexerTest(name, code) {
         const lexer = new Lexer(code);
         const tokens = lexer.tokenize();
         console.table(tokens);
+        return tokens;
     } catch (err) {
         console.error("LEXER ERROR:", err.message);
+        return err.message;
     }
 }
 
@@ -48,11 +50,11 @@ runLexerTest(
 // Test 6: comparison operators
 runLexerTest(
     "comparison operators",
-       `if x == 10
+    `if x == 10
      if y != 5
      if z >= 1
      if a <= 9`);
-     
+
 // Test 7: Logical operators
 runLexerTest(
     "logical operators",
