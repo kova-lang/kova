@@ -2,21 +2,21 @@
 
 // #### main parser class ####
 export default class Parser {
-   constructor(lexer){
-    this.lexer = lexer;
-    this.currentPos = lexer.length?0:-1;
-    this.currentToken = lexer.length? lexer[0]: null;
-       }
+    constructor(lexer) {
+        this.lexer = lexer;
+        this.currentPos = lexer.length ? 0 : -1;
+        this.currentToken = lexer.length ? lexer[0] : null;
+    }
 
     // #### Advance to the next token in the token stream ####
-    advance(){
+    advance() {
         this.currentPos++;
-        this.currentToken = this.currentPos < this.lexer.length? this.lexer[this.currentPos]: null;
+        this.currentToken = this.currentPos < this.lexer.length ? this.lexer[this.currentPos] : null;
     }
 
     // #### Expect a specific token type and advance if it matches, otherwise throw an error ####
-    expect(type){`Expected ${type} but got ${this.currentToken.type}`
-        if( this.currentToken === null ||this.currentToken !== type){
+    expect(type) {
+        if (this.currentToken === null || this.currentToken !== type) {
             throw new Error(`Expected ${type} but got ${this.currentToken.type}`)
         }
         this.advance();
@@ -24,142 +24,142 @@ export default class Parser {
 
     // #### parse program ####
     parseProgram() {
-    const body = [];
+        const body = [];
 
-    while (this.currentToken.type !== "EOF") {
-        body.push(this.parseStatement());
-    }
+        while (this.currentToken.type !== "EOF") {
+            body.push(this.parseStatement());
+        }
 
-    return {
-        type: "Program",
-        body
-    };
+        return {
+            type: "Program",
+            body
+        };
     }
 
     // #### parse Statement ####
     parseStatement() {
-    switch (this.currentToken.type) {
-       case "LET":
-            return this.parseVariableDeclaration();
+        switch (this.currentToken.type) {
+            case "LET":
+                return this.parseVariableDeclaration();
 
-        case "IF":
-            return this.parseIfStatement();
+            case "IF":
+                return this.parseIfStatement();
 
-        case "POST_HTTP":
-        case "GET_HTTP":
-        case "PUT_HTTP":
-        case "DELETE_HTTP":
-            return this.parseHttpStatement();
+            case "POST_HTTP":
+            case "GET_HTTP":
+            case "PUT_HTTP":
+            case "DELETE_HTTP":
+                return this.parseHttpStatement();
 
-        case "LBRACE":
-            return this.parseBlock();
+            case "LBRACE":
+                return this.parseBlock();
 
-        default:
-            return this.parseExpressionStatement();
-       }   
+            default:
+                return this.parseExpressionStatement();
+        }
     }
 
     //#### parse variable declarion
     parseVariableDeclaration() {
-    this.expect("LET");
+        this.expect("LET");
 
-    const id = this.currentToken;
-    this.expect("IDENTIFIER");
+        const id = this.currentToken;
+        this.expect("IDENTIFIER");
 
-    this.expect("ASSIGN"); // "=" token
+        this.expect("ASSIGN"); // "=" token
 
-    const init = this.parseExpression();
+        const init = this.parseExpression();
 
-    return {
-        type: "VariableDeclaration",
-        id: { type: "Identifier", name: id.value },
-        init
+        return {
+            type: "VariableDeclaration",
+            id: { type: "Identifier", name: id.value },
+            init
         };
     }
     // #### parse if statement
     parseIfStatement() {
-    this.expect("IF");
+        this.expect("IF");
 
-    const test = this.parseExpression();
-    const consequent = this.parseBlock();
+        const test = this.parseExpression();
+        const consequent = this.parseBlock();
 
-    return {
-        type: "IfStatement",
-        test,
-        consequent
+        return {
+            type: "IfStatement",
+            test,
+            consequent
         };
     }
 
     // ### Block ####
     parseBlock() {
-    
-    this.expect("LBRACE");
 
-    const body = [];
+        this.expect("LBRACE");
 
-    while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
-        body.push(this.parseStatement());
+        const body = [];
+
+        while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
+            body.push(this.parseStatement());
+        }
+
+        this.expect("RBRACE");
+
+        return {
+            type: "BlockStatement",
+            body
+        };
     }
 
-    this.expect("RBRACE");
-
-    return {
-        type: "BlockStatement",
-        body
-    };
-    }
- 
     // ### POST statement
     parseHttpStatement() {
         const verb = this.currentToken;
-    this.advance(); // consume verb
+        this.advance(); // consume verb
 
-    const urlToken = this.currentToken;
-    this.expect("STRING");
+        const urlToken = this.currentToken;
+        this.expect("STRING");
 
-    return {
-        type: "HttpStatement",
-        method: verb.value,
-        url: urlToken.value
-    };
+        return {
+            type: "HttpStatement",
+            method: verb.value,
+            url: urlToken.value
+        };
     }
 
     // #### Expression Statement
     parseExpressionStatement() {
-    const expression = this.parseExpression();
+        const expression = this.parseExpression();
 
-    return {
-        type: "ExpressionStatement",
-        expression
+        return {
+            type: "ExpressionStatement",
+            expression
         };
     }
 
     // #### Expression system entry
     parseExpression() {
-    return this.parseLogicalOr();
+        return this.parseLogicalOr();
     }
 
-    // Expression prescedence
+    // Expression precedence
 
     // // ####  Logical OR
     parseLogicalOr() {
-    let left = this.parseLogicalAnd();
+        let left = this.parseLogicalAnd();
 
-    while (this.currentToken.type === "OR") {
-        const operator = this.currentToken;
-        this.advance();
+        while (this.currentToken.type === "OR") {
+            const operator = this.currentToken;
+            this.advance();
 
-        const right = this.parseLogicalAnd();
+            const right = this.parseLogicalAnd();
 
-        left = {
-            type: "BinaryExpression",
-            operator: operator.value,
-            left,
-            right
-        };
-    }
+            left = {
+                type: "BinaryExpression",
+                operator: operator.value,
+                left,
+                right
+            };
+        }
 
-    return left;
+        return left;
     }
     // // ####  Logical AND
     parseLogicalAnd() {
@@ -186,9 +186,9 @@ export default class Parser {
         let left = this.parseComparison();
 
         while (
-        this.currentToken.type === "EQ" ||
-        this.currentToken.type === "NEQ"
-    ) {
+            this.currentToken.type === "EQ" ||
+            this.currentToken.type === "NEQ"
+        ) {
             const operator = this.currentToken;
             this.advance();
 
@@ -209,11 +209,11 @@ export default class Parser {
         let left = this.parseTerm();
 
         while (
-        this.currentToken.type === "GT" ||
-        this.currentToken.type === "LT" ||
-        this.currentToken.type === "GTE" ||
-        this.currentToken.type === "LTE"
-    ) {
+            this.currentToken.type === "GT" ||
+            this.currentToken.type === "LT" ||
+            this.currentToken.type === "GTE" ||
+            this.currentToken.type === "LTE"
+        ) {
             const operator = this.currentToken;
             this.advance();
 
@@ -232,120 +232,120 @@ export default class Parser {
 
     // #### Parse Term
     parseTerm() {
-    let left = this.parseFactor();
+        let left = this.parseFactor();
 
-    while (
-        this.currentToken.type === "PLUS" ||
-        this.currentToken.type === "MINUS"
-    ) {
-        const operator = this.currentToken;
-        this.advance();
+        while (
+            this.currentToken.type === "PLUS" ||
+            this.currentToken.type === "MINUS"
+        ) {
+            const operator = this.currentToken;
+            this.advance();
 
-        const right = this.parseFactor();
+            const right = this.parseFactor();
 
-        left = {
-            type: "BinaryExpression",
-            operator: operator.value,
-            left,
-            right
-        };
-    }
+            left = {
+                type: "BinaryExpression",
+                operator: operator.value,
+                left,
+                right
+            };
+        }
 
-    return left;
+        return left;
     }
 
     // #### Parse Factor
     parseFactor() {
-    let left = this.parseUnary();
+        let left = this.parseUnary();
 
-    while (
-        this.currentToken.type === "STAR" ||
-        this.currentToken.type === "SLASH"
-    ) {
-        const operator = this.currentToken;
-        this.advance();
+        while (
+            this.currentToken.type === "STAR" ||
+            this.currentToken.type === "SLASH"
+        ) {
+            const operator = this.currentToken;
+            this.advance();
 
-        const right = this.parseUnary();
+            const right = this.parseUnary();
 
-        left = {
-            type: "BinaryExpression",
-            operator: operator.value,
-            left,
-            right
-        };
-    }
+            left = {
+                type: "BinaryExpression",
+                operator: operator.value,
+                left,
+                right
+            };
+        }
 
-    return left;
+        return left;
     }
 
     // #### pARSE UNARY
     parseUnary() {
-    if (
-        this.currentToken.type === "BANG" ||
-        this.currentToken.type === "MINUS"
-    ) {
-        const operator = this.currentToken;
-        this.advance();
+        if (
+            this.currentToken.type === "BANG" ||
+            this.currentToken.type === "MINUS"
+        ) {
+            const operator = this.currentToken;
+            this.advance();
 
-        const argument = this.parseUnary();
+            const argument = this.parseUnary();
 
-        return {
-            type: "UnaryExpression",
-            operator: operator.value,
-            argument
-        };
-    }
+            return {
+                type: "UnaryExpression",
+                operator: operator.value,
+                argument
+            };
+        }
 
-    return this.parsePrimary();
+        return this.parsePrimary();
     }
 
     // #### pRIMARY THE BASE  layer
     parsePrimary() {
-    const token = this.currentToken;
+        const token = this.currentToken;
 
-    if (token.type === "NUMBER") {
-        this.advance();
-        return {
-            type: "Literal",
-            value: token.value
-        };
-    }
+        if (token.type === "NUMBER") {
+            this.advance();
+            return {
+                type: "Literal",
+                value: token.value
+            };
+        }
 
-    if (token.type === "STRING") {
-        this.advance();
-        return {
-            type: "Literal",
-            value: token.value
-        };
-    }
+        if (token.type === "STRING") {
+            this.advance();
+            return {
+                type: "Literal",
+                value: token.value
+            };
+        }
 
-    if (token.type === "BOOLEAN") {
-        this.advance();
-        return {
-            type: "Literal",
-            value: token.value
-        };
-    }
+        if (token.type === "BOOLEAN") {
+            this.advance();
+            return {
+                type: "Literal",
+                value: token.value
+            };
+        }
 
-    if (token.type === "IDENTIFIER") {
-        this.advance();
-        return {
-            type: "Identifier",
-            name: token.value
-        };
-    }
+        if (token.type === "IDENTIFIER") {
+            this.advance();
+            return {
+                type: "Identifier",
+                name: token.value
+            };
+        }
 
-    if (token.type === "LPAREN") {
-        this.advance();
+        if (token.type === "LPAREN") {
+            this.advance();
 
-        const expr = this.parseExpression();
+            const expr = this.parseExpression();
 
-        this.expect("RPAREN");
+            this.expect("RPAREN");
 
-        return expr;
-    }
+            return expr;
+        }
 
-    throw new Error(`Unexpected token: ${token.type}`);
+        throw new Error(`Unexpected token: ${token.type}`);
     }
 
 
