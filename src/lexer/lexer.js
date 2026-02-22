@@ -1,6 +1,8 @@
 // #### Kova-lexer ####
-import { KEYWORDS, SINGLE_OPS, PSYMBOLS, MULTI_OPS } from "../lib/constants/store.js";
-import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX, OP_RGX } from "../lib/regex/index.js";
+import { KEYWORDS, SINGLE_OPS, PSYMBOLS, MULTI_OPS } from "../../lib/constants/store.js";
+import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX, OP_RGX } from "../../lib/regex/index.js";
+
+
 
 export default class Lexer {
     constructor(code) {

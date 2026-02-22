@@ -35,7 +35,7 @@ export default class Parser {
 
         const body = [];
 
-        while (this.currentToken.type !== "EOF") {
+        while (this.currentToken.type && this.currentToken.type !== "EOF") {
             body.push(this.parseStatement());
         }
 
