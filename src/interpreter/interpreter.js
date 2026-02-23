@@ -1,18 +1,23 @@
 export default class Interpreter {
-    constructor() {
+    constructor(externals = {}) {
         this.scopes = [];
+        this.output = [];
+        this.externals = externals; // deterministic external calls
+        this.returnValue = undefined;
+        this.shouldReturn = false;
     }
 
     interpret(ast) {
         this.enterScope(); // global scope
         this.visit(ast);
         this.exitScope();
+        return {
+            returnValue: this.returnValue,
+            output: this.output
+        };
     }
 
-  
-    // Scope Management
-  
-
+    // Scope Management ####
     enterScope() {
         this.scopes.push(new Map());
     }
@@ -35,15 +40,17 @@ export default class Interpreter {
         throw new Error(`Undefined variable ${name}`);
     }
 
-  
-    // Visitor Execution
-  
-
+    // Visitor Execution ####
     visit(node) {
+        if (this.shouldReturn) return;
+
         switch (node.type) {
 
             case "Program":
-                node.body.forEach(stmt => this.visit(stmt));
+                for (const stmt of node.body) {
+                    this.visit(stmt);
+                    if (this.shouldReturn) break;
+                }
                 break;
 
             case "VariableDeclaration":
@@ -65,7 +72,10 @@ export default class Interpreter {
 
             case "BlockStatement":
                 this.enterScope();
-                node.body.forEach(stmt => this.visit(stmt));
+                for (const stmt of node.body) {
+                    this.visit(stmt);
+                    if (this.shouldReturn) break;
+                }
                 this.exitScope();
                 break;
 
@@ -73,24 +83,32 @@ export default class Interpreter {
                 const condition = this.visit(node.test);
                 if (condition) {
                     this.visit(node.consequent);
+                } else if (node.alternate) {
+                    this.visit(node.alternate);
                 }
+                break;
+
+            case "ReturnStatement":
+                this.returnValue = this.visit(node.argument);
+                this.shouldReturn = true;
                 break;
 
             case "ExpressionStatement":
                 return this.visit(node.expression);
 
             case "HttpStatement":
-                return this.mockHttp(node);
+                this.output.push(`[HTTP MOCK] ${node.method} → ${node.url}`);
+                break;
+
+            case "CallExpression":
+                return this.executeExternal(node);
 
             default:
                 throw new Error(`Unknown node type: ${node.type}`);
         }
     }
 
-  
-    // Evaluation Helpers
-  
-
+    // Evaluation Helpers ####    
     evaluateBinary(node) {
         const left = this.visit(node.left);
         const right = this.visit(node.right);
@@ -115,7 +133,6 @@ export default class Interpreter {
 
     evaluateUnary(node) {
         const value = this.visit(node.argument);
-
         switch (node.operator) {
             case "-": return -value;
             case "!": return !value;
@@ -124,8 +141,14 @@ export default class Interpreter {
         }
     }
 
-    mockHttp(node) {
-        console.log(`[HTTP MOCK] ${node.method} → ${node.url}`);
-        return null;
+    executeExternal(node) {
+        const fnName = node.callee.name;
+        const args = node.arguments.map(arg => this.visit(arg));
+
+        if (!this.externals[fnName]) {
+            throw new Error(`Unknown external function ${fnName}`);
+        }
+
+        return this.externals[fnName](...args);
     }
 }
