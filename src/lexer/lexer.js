@@ -115,7 +115,7 @@ export default class Lexer {
         // #### check if the text is a keyword ####
         if (text && KEYWORDS[text]) {
 
-            return { type: KEYWORDS[text], value: text }
+            return { type: KEYWORDS[text], value: text , line: this.line, column: this.column}
         }
         // #### return identifier 
         return { type: "IDENTIFIER", value: text, line: this.line, column: this.column }
