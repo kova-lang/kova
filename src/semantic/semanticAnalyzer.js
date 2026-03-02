@@ -4,10 +4,28 @@ export default class SemanticAnalyzer {
     constructor(source, externals = {}, externalSignatures = {}) {
         this.source = source
         this.scopes = [];
-        this.externals = externals; // { AI: fn }
+        this.externals = externals;
         this.externalSignatures = externalSignatures;
         this.currentReturnType = null;
     }
+
+    // -----------------------------
+    // Probabilistic Type Helpers
+    // -----------------------------
+
+    Prob(inner) {
+        return { kind: "prob", inner };
+    }
+
+    isProb(type) {
+        return type && typeof type === "object" && type.kind === "prob";
+    }
+
+    unwrapProb(type) {
+        return type.inner;
+    }
+
+    // -----------------------------
 
     analyze(ast) {
         this.enterScope();
@@ -15,16 +33,13 @@ export default class SemanticAnalyzer {
         this.exitScope();
     }
 
-
-    // Scope Handling
     enterScope() {
         this.scopes.push(new Map());
     }
+
     exitScope() {
         this.scopes.pop();
     }
-
-
 
     declare(name, type) {
         const currentScope = this.scopes[this.scopes.length - 1];
@@ -50,8 +65,6 @@ export default class SemanticAnalyzer {
         throw new Error(`Undeclared variable "${name}"`);
     }
 
-
-    // Visitor
     visit(node) {
         switch (node.type) {
 
@@ -60,7 +73,7 @@ export default class SemanticAnalyzer {
                 break;
 
             case "VariableDeclaration": {
-                this.declare(node.id.name, "unknown");  // pre-declare
+                this.declare(node.id.name, "unknown");
                 const initType = this.visit(node.init);
                 this.scopes[this.scopes.length - 1].set(node.id.name, initType);
                 break;
@@ -77,7 +90,11 @@ export default class SemanticAnalyzer {
                 const rightType = this.visit(node.right);
                 const op = node.operator;
 
-                // Arithmetic
+                // 🚫 Prevent probabilistic values in binary expressions
+                if (this.isProb(leftType) || this.isProb(rightType)) {
+                    this.error("Probabilistic values must be resolved before use", node);
+                }
+
                 if (["+", "-", "*", "/"].includes(op)) {
                     if (leftType !== "number" || rightType !== "number") {
                         this.error(`Arithmetic operators require numbers`, node);
@@ -85,7 +102,6 @@ export default class SemanticAnalyzer {
                     return "number";
                 }
 
-                // Comparison
                 if ([">", "<", ">=", "<="].includes(op)) {
                     if (leftType !== "number" || rightType !== "number") {
                         this.error(`Comparison operators require numbers`, node);
@@ -93,7 +109,6 @@ export default class SemanticAnalyzer {
                     return "boolean";
                 }
 
-                // Equality
                 if (["==", "!="].includes(op)) {
                     if (leftType !== rightType) {
                         this.error(`Equality operands must be same type`, node);
@@ -101,7 +116,6 @@ export default class SemanticAnalyzer {
                     return "boolean";
                 }
 
-                // Logical
                 if (["&&", "||"].includes(op)) {
                     if (leftType !== "boolean" || rightType !== "boolean") {
                         this.error(`Logical operators require booleans`, node);
@@ -114,6 +128,11 @@ export default class SemanticAnalyzer {
 
             case "UnaryExpression": {
                 const argType = this.visit(node.argument);
+
+                if (this.isProb(argType)) {
+                    this.error("Probabilistic values must be resolved before use", node);
+                }
+
                 if (node.operator === "-" && argType !== "number")
                     this.error("Unary '-' requires a number", node);
                 if (node.operator === "!" && argType !== "boolean")
@@ -123,6 +142,14 @@ export default class SemanticAnalyzer {
 
             case "IfStatement": {
                 const testType = this.visit(node.test);
+
+                // 🚫 NEW RULE
+                if (this.isProb(testType)) {
+                    this.error(
+                        "Probabilistic value cannot be used directly in 'if' condition. Use resolve().",
+                        node.test
+                    );
+                }
 
                 if (testType !== "boolean") {
                     this.error("If condition must be boolean", node);
@@ -138,7 +165,8 @@ export default class SemanticAnalyzer {
                 if (consequentReturn && alternateReturn) {
                     if (consequentReturn !== alternateReturn) {
                         this.error(
-                            `Mismatched return types in branches: ${consequentReturn} vs ${alternateReturn}`, node
+                            `Mismatched return types in branches: ${consequentReturn} vs ${alternateReturn}`,
+                            node
                         );
                     }
                     return consequentReturn;
@@ -146,8 +174,6 @@ export default class SemanticAnalyzer {
 
                 return null;
             }
-            case "HttpStatement":
-                break; // or  URL validation later
 
             case "BlockStatement":
                 this.enterScope();
@@ -168,6 +194,26 @@ export default class SemanticAnalyzer {
 
                 const fnName = node.callee.name;
 
+                // -----------------------------
+                // resolve(prob<T>) -> T
+                // -----------------------------
+                if (fnName === "resolve") {
+                    if (node.arguments.length !== 1) {
+                        this.error("resolve() takes exactly one argument", node);
+                    }
+
+                    const argType = this.visit(node.arguments[0]);
+
+                    if (!this.isProb(argType)) {
+                        this.error("resolve() expects a probabilistic value", node);
+                    }
+
+                    return this.unwrapProb(argType);
+                }
+
+                // -----------------------------
+                // External function validation
+                // -----------------------------
                 if (!this.externals[fnName]) {
                     this.error(`Unknown function "${fnName}"`);
                 }
@@ -185,10 +231,18 @@ export default class SemanticAnalyzer {
 
                         if (expectedType !== "any" && argType !== expectedType) {
                             this.error(
-                                `Argument ${i + 1} of ${fnName} must be ${expectedType}, got ${argType}`, node
+                                `Argument ${i + 1} of ${fnName} must be ${expectedType}, got ${argType}`,
+                                node
                             );
                         }
                     });
+
+                    // -----------------------------
+                    // 🔴 AI returns prob<T>
+                    // -----------------------------
+                    if (fnName === "AI") {
+                        return this.Prob(signature.returns);
+                    }
 
                     return signature.returns;
                 }
@@ -200,13 +254,12 @@ export default class SemanticAnalyzer {
                 break;
         }
     }
+
     analyzeBranch(node) {
         if (!node) return null;
 
-        // Case 1: BlockStatement
         if (node.type === "BlockStatement") {
             let returnType = null;
-
             this.enterScope();
 
             for (const stmt of node.body) {
@@ -217,7 +270,8 @@ export default class SemanticAnalyzer {
                         returnType = type;
                     } else if (returnType !== type) {
                         this.error(
-                            `Inconsistent return types inside branch: ${returnType} vs ${type}`, node
+                            `Inconsistent return types inside branch: ${returnType} vs ${type}`,
+                            node
                         );
                     }
                 } else {
@@ -229,18 +283,12 @@ export default class SemanticAnalyzer {
             return returnType;
         }
 
-        // Case 2: else-if (nested IfStatement)
         if (node.type === "IfStatement") {
             return this.visit(node);
         }
 
-        // Case 3: single statement (defensive)
         return this.visit(node);
     }
-
-
-
-    // error helper
 
     error(message, node) {
         throw new Diagnostic(message, node, this.source)
