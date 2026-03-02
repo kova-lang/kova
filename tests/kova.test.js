@@ -1,7 +1,7 @@
 import { runKova } from "../src/index.js";
 import { defaultExternals, defaultSignatures } from "../lib/functions/index.js";
 
-// ─── Test Runner ─────────────────────────────────────────────────────────────
+// Test Runner 
 let passed = 0, failed = 0;
 
 function test(name, fn) {
@@ -30,7 +30,7 @@ function assertThrows(fn, fragment) {
     if (!threw) throw new Error("Expected an error to be thrown, but none was");
 }
 
-// ─── Variable Declaration ─────────────────────────────────────────────────────
+// Variable Declaration ─────────────────────────────────────────────────────
 console.log("\n Variable Declaration");
 
 test("declares a number", () => {
@@ -52,7 +52,7 @@ test("throws on duplicate declaration", () => {
     assertThrows(() => runKova(`let x = 5  let x = 10`), "already declared");
 });
 
-// ─── Arithmetic ───────────────────────────────────────────────────────────────
+// Arithmetic 
 console.log("\n Arithmetic");
 
 test("addition",                () => assert(runKova(`return 3 + 4`).returnValue === 7));
@@ -67,7 +67,7 @@ test("throws: arithmetic on string", () => {
     assertThrows(() => runKova(`let x = "a"  let y = x + 1`), "Arithmetic");
 });
 
-// ─── Comparison ───────────────────────────────────────────────────────────────
+// Comparison 
 console.log("\n Comparison");
 
 test("greater than (true)",           () => assert(runKova(`return 5 > 3`).returnValue === true));
@@ -81,7 +81,7 @@ test("equality strings",              () => assert(runKova(`return "a" == "a"`).
 test("throws: equality across types", () => assertThrows(() => runKova(`return 1 == true`), "same type"));
 test("throws: comparison on strings", () => assertThrows(() => runKova(`return "a" > "b"`), "Comparison"));
 
-// ─── Logical ──────────────────────────────────────────────────────────────────
+// Logical 
 console.log("\n Logical");
 
 test("AND true && true",       () => assert(runKova(`return true && true`).returnValue === true));
@@ -92,7 +92,7 @@ test("NOT !false",             () => assert(runKova(`return !false`).returnValue
 test("throws: AND on numbers", () => assertThrows(() => runKova(`return 1 && 2`), "Logical"));
 test("throws: OR on numbers",  () => assertThrows(() => runKova(`return 1 || 0`), "Logical"));
 
-// ─── If / Else ────────────────────────────────────────────────────────────────
+// If / Else 
 console.log("\n If / Else");
 
 test("if branch taken", () => {
@@ -155,7 +155,7 @@ test("throws: if condition not boolean", () => {
     assertThrows(() => runKova(`let x = 3\nif x {\n    return 3\n}`), "boolean");
 });
 
-// ─── Scope ────────────────────────────────────────────────────────────────────
+//  Scope 
 console.log("\n Scope");
 
 test("inner var not visible outside block", () => {
@@ -178,7 +178,7 @@ if x == 1 {
 return x`).returnValue === 1);
 });
 
-// ─── Return ───────────────────────────────────────────────────────────────────
+//  Return 
 console.log("\n️  Return");
 
 test("early return stops execution", () => {
@@ -191,7 +191,7 @@ test("no return → returnValue undefined", () => {
     assert(runKova(`let x = 5`).returnValue === undefined);
 });
 
-// ─── HTTP ─────────────────────────────────────────────────────────────────────
+//  HTTP 
 console.log("\n HTTP");
 
 test("POST produces output entry", () => {
@@ -205,10 +205,10 @@ test("PUT produces output entry",     () => assert(runKova(`PUT "https://a.com"`
 test("DELETE produces output entry",  () => assert(runKova(`DELETE "https://a.com"`).output[0].includes("DELETE")));
 test("multiple HTTP calls accumulate",() => assert(runKova(`POST "https://a.com"\nGET "https://b.com"`).output.length === 2));
 
-// ─── External Calls ───────────────────────────────────────────────────────────
+// External Calls 
 console.log("\n External Calls");
 
-// FIX 1: AI("hello") was failing because defaultSignatures requires 2 params.
+// AI("hello") was failing because defaultSignatures requires 2 params.
 // Match the actual signature — use AI("summarize", x) which is the 2-param form.
 test("AI call returns a value", () => {
     const r = runKova(
@@ -239,7 +239,7 @@ test("throws: wrong arg count for AI", () => {
     );
 });
 
-// ─── Lexer Edge Cases ─────────────────────────────────────────────────────────
+// Lexer Edge Cases 
 console.log("\n Lexer");
 
 test("throws: identifier starting with digit", () => {
@@ -255,7 +255,7 @@ test("multi-line program", () => {
     assert(runKova(`let a = 1\nlet b = 2\nlet c = a + b\nreturn c`).returnValue === 3);
 });
 
-// ─── Diagnostic ───────────────────────────────────────────────────────────────
+//  Diagnostic 
 console.log("\n Diagnostic");
 
 // Helper: run code that always throws a Diagnostic, return the caught error
@@ -264,7 +264,7 @@ function catchDiagnostic(code) {
     catch (e) { return e; }
 }
 
-// FIX 2: Use a simple 1-line program so the Identifier node definitely has location.
+// Use a simple 1-line program so the Identifier node definitely has location.
 // `let y = x + 2` — `x` is an undeclared Identifier on line 1, column 9.
 test("error has numeric line property", () => {
     const e = catchDiagnostic(`let y = x + 2`);
@@ -272,7 +272,7 @@ test("error has numeric line property", () => {
     assert(typeof e.line === "number", `Expected number, got ${typeof e.line} (value: ${e.line})`);
 });
 
-// FIX 3: Same simple case — format() should return a string containing the source line.
+//  Same simple case — format() should return a string containing the source line.
 test("format() returns non-empty string with source line", () => {
     const e = catchDiagnostic(`let y = x + 2`);
     assert(e !== null, "Expected error to be thrown");
@@ -288,7 +288,7 @@ test("format() contains caret pointer", () => {
     assert(formatted.includes("^"), `format() missing '^' pointer:\n${formatted}`);
 });
 
-// FIX 4: Confirm the error targets the condition node, not the if keyword.
+// Confirm the error targets the condition node, not the if keyword.
 // We check line (must be 2) and that column > 1 (would be 1 if wrongly targeting `if`).
 // The exact column depends on whether the lexer captures position before or after advancing.
 test("if-condition error targets condition node, not if keyword", () => {
@@ -302,7 +302,7 @@ test("if-condition error targets condition node, not if keyword", () => {
     );
 });
 
-// ─── Results ──────────────────────────────────────────────────────────────────
+//  Results 
 console.log(`\n${"─".repeat(50)}`);
 console.log(`  ${passed} passed, ${failed} failed out of ${passed + failed} tests`);
 console.log(`${"─".repeat(50)}\n`);
