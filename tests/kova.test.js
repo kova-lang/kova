@@ -1,4 +1,6 @@
 import { runKova } from "../src/index.js";
+import { defaultExternals, defaultSignatures } from "../lib/functions/index.js";
+
 
 function testSemanticValid() {
     const code = `
@@ -46,14 +48,19 @@ function testArithmetic() {
 
 function testIf() {
     const result = runKova(`
-        let x = 5
-        if x > 3 {
-            return 10
-        }
-        return 0
+        let x = 2
+if x > 3 {
+    return 10
+}
+else if (x == 2) {
+    return 2
+}
+else {
+    return 0
+}
     `);
-
-    console.log(result.returnValue === 10);
+    console.log(result.returnValue)
+    console.log(result.returnValue === 2);
 }
 
 function testHttpMock() {
@@ -64,8 +71,23 @@ function testHttpMock() {
     console.log(result.output.length === 1);
 }
 
+function testFunctionCall() {
+    const result = runKova(`
+        let x = 3
+        let y = AI("summarize", x)
+        return y
+    `,
+        defaultExternals,
+        defaultSignatures);
+
+    console.log(result.returnValue);
+}
+
 
 testSemanticValid();
 testSemanticUndeclared();
 testSemanticDuplicate();
 testHttpMock();
+testArithmetic();
+testFunctionCall();
+testIf();
