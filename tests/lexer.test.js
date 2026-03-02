@@ -1,4 +1,4 @@
-import Lexer from "../src/lexer.js";
+import Lexer from "../src/lexer/lexer.js";
 
 export function runLexerTest(name, code) {
     console.log(`\n=== TEST: ${name} ===`);
