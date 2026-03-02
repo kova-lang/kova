@@ -1,5 +1,8 @@
+import { Diagnostic } from "../core/diagnostic.js";
+
 export default class SemanticAnalyzer {
-    constructor(externals = {}, externalSignatures = {}) {
+    constructor(source, externals = {}, externalSignatures = {}) {
+        this.source = source
         this.scopes = [];
         this.externals = externals; // { AI: fn }
         this.externalSignatures = externalSignatures;
@@ -14,15 +17,14 @@ export default class SemanticAnalyzer {
 
 
     // Scope Handling
-
-
     enterScope() {
         this.scopes.push(new Map());
     }
-
     exitScope() {
         this.scopes.pop();
     }
+
+
 
     declare(name, type) {
         const currentScope = this.scopes[this.scopes.length - 1];
@@ -58,8 +60,9 @@ export default class SemanticAnalyzer {
                 break;
 
             case "VariableDeclaration": {
+                this.declare(node.id.name, "unknown");  // pre-declare
                 const initType = this.visit(node.init);
-                this.declare(node.id.name, initType);
+                this.scopes[this.scopes.length - 1].set(node.id.name, initType);
                 break;
             }
 
@@ -77,7 +80,7 @@ export default class SemanticAnalyzer {
                 // Arithmetic
                 if (["+", "-", "*", "/"].includes(op)) {
                     if (leftType !== "number" || rightType !== "number") {
-                        throw new Error(`Arithmetic operators require numbers`);
+                        this.error(`Arithmetic operators require numbers`, node);
                     }
                     return "number";
                 }
@@ -85,7 +88,7 @@ export default class SemanticAnalyzer {
                 // Comparison
                 if ([">", "<", ">=", "<="].includes(op)) {
                     if (leftType !== "number" || rightType !== "number") {
-                        throw new Error(`Comparison operators require numbers`);
+                        this.error(`Comparison operators require numbers`, node);
                     }
                     return "boolean";
                 }
@@ -93,7 +96,7 @@ export default class SemanticAnalyzer {
                 // Equality
                 if (["==", "!="].includes(op)) {
                     if (leftType !== rightType) {
-                        throw new Error(`Equality operands must be same type`);
+                        this.error(`Equality operands must be same type`, node);
                     }
                     return "boolean";
                 }
@@ -101,22 +104,28 @@ export default class SemanticAnalyzer {
                 // Logical
                 if (["&&", "||"].includes(op)) {
                     if (leftType !== "boolean" || rightType !== "boolean") {
-                        throw new Error(`Logical operators require booleans`);
+                        this.error(`Logical operators require booleans`, node);
                     }
                     return "boolean";
                 }
 
-                throw new Error(`Unknown operator ${op}`);
+                this.error(`Unknown operator ${op}`, node);
             }
 
-            case "UnaryExpression":
-                return this.visit(node.argument);
+            case "UnaryExpression": {
+                const argType = this.visit(node.argument);
+                if (node.operator === "-" && argType !== "number")
+                    this.error("Unary '-' requires a number", node);
+                if (node.operator === "!" && argType !== "boolean")
+                    this.error("Unary '!' requires a boolean", node);
+                return argType;
+            }
 
             case "IfStatement": {
                 const testType = this.visit(node.test);
 
                 if (testType !== "boolean") {
-                    throw new Error("If condition must be boolean");
+                    this.error("If condition must be boolean", node);
                 }
 
                 const consequentReturn = this.analyzeBranch(node.consequent);
@@ -128,8 +137,8 @@ export default class SemanticAnalyzer {
 
                 if (consequentReturn && alternateReturn) {
                     if (consequentReturn !== alternateReturn) {
-                        throw new Error(
-                            `Mismatched return types in branches: ${consequentReturn} vs ${alternateReturn}`
+                        this.error(
+                            `Mismatched return types in branches: ${consequentReturn} vs ${alternateReturn}`, node
                         );
                     }
                     return consequentReturn;
@@ -137,6 +146,8 @@ export default class SemanticAnalyzer {
 
                 return null;
             }
+            case "HttpStatement":
+                break; // or  URL validation later
 
             case "BlockStatement":
                 this.enterScope();
@@ -152,20 +163,20 @@ export default class SemanticAnalyzer {
 
             case "CallExpression": {
                 if (node.callee.type !== "Identifier") {
-                    throw new Error("Invalid function call");
+                    this.error("Invalid function call", node);
                 }
 
                 const fnName = node.callee.name;
 
                 if (!this.externals[fnName]) {
-                    throw new Error(`Unknown function "${fnName}"`);
+                    this.error(`Unknown function "${fnName}"`);
                 }
 
                 const signature = this.externalSignatures[fnName];
 
                 if (signature) {
                     if (node.arguments.length !== signature.params.length) {
-                        throw new Error(`Invalid argument count for ${fnName}`);
+                        this.error(`Invalid argument count for ${fnName}`, node);
                     }
 
                     node.arguments.forEach((arg, i) => {
@@ -173,8 +184,8 @@ export default class SemanticAnalyzer {
                         const expectedType = signature.params[i];
 
                         if (expectedType !== "any" && argType !== expectedType) {
-                            throw new Error(
-                                `Argument ${i + 1} of ${fnName} must be ${expectedType}, got ${argType}`
+                            this.error(
+                                `Argument ${i + 1} of ${fnName} must be ${expectedType}, got ${argType}`, node
                             );
                         }
                     });
@@ -190,40 +201,48 @@ export default class SemanticAnalyzer {
         }
     }
     analyzeBranch(node) {
-    if (!node) return null;
+        if (!node) return null;
 
-    // Case 1: BlockStatement
-    if (node.type === "BlockStatement") {
-        let returnType = null;
+        // Case 1: BlockStatement
+        if (node.type === "BlockStatement") {
+            let returnType = null;
 
-        this.enterScope();
+            this.enterScope();
 
-        for (const stmt of node.body) {
-            if (stmt.type === "ReturnStatement") {
-                const type = this.visit(stmt);
+            for (const stmt of node.body) {
+                if (stmt.type === "ReturnStatement") {
+                    const type = this.visit(stmt);
 
-                if (!returnType) {
-                    returnType = type;
-                } else if (returnType !== type) {
-                    throw new Error(
-                        `Inconsistent return types inside branch: ${returnType} vs ${type}`
-                    );
+                    if (!returnType) {
+                        returnType = type;
+                    } else if (returnType !== type) {
+                        this.error(
+                            `Inconsistent return types inside branch: ${returnType} vs ${type}`, node
+                        );
+                    }
+                } else {
+                    this.visit(stmt);
                 }
-            } else {
-                this.visit(stmt);
             }
+
+            this.exitScope();
+            return returnType;
         }
 
-        this.exitScope();
-        return returnType;
-    }
+        // Case 2: else-if (nested IfStatement)
+        if (node.type === "IfStatement") {
+            return this.visit(node);
+        }
 
-    // Case 2: else-if (nested IfStatement)
-    if (node.type === "IfStatement") {
+        // Case 3: single statement (defensive)
         return this.visit(node);
     }
 
-    // Case 3: single statement (defensive)
-    return this.visit(node);
-}
+
+
+    // error helper
+
+    error(message, node) {
+        throw new Diagnostic(message, node, this.source)
+    };
 }

@@ -73,6 +73,8 @@ export default class Lexer {
     //  Read a number token from the source code
     readNumber() {
         let number = "";
+        const line = this.line;
+        const column = this.column;
         while (this.currentChar && NUMBER_RGX.test(this.currentChar)) {
             number += this.currentChar;
             this.advance();
@@ -83,11 +85,14 @@ export default class Lexer {
                 `Invalid identifier: identifiers cannot start with a number (${number}${this.currentChar}...)`
             );
         }
-        return { type: "NUMBER", value: Number(number), line: this.line, column: this.column }
+        return { type: "NUMBER", value: Number(number), line, column }
     }
     // Read a string token from the source code
     readString() {
-        let string = ""
+        let string = "";
+        const line = this.line;
+        const column = this.column;
+
         this.advance();
         while (this.currentChar && this.currentChar !== '"') {
             string += this.currentChar;
@@ -97,15 +102,18 @@ export default class Lexer {
             throw new Error('Expected ["] at the closing of the string value ')
         }
         this.advance();
-        return { type: "STRING", value: string, line: this.line, column: this.column }
+        return { type: "STRING", value: string, line, column }
     }
 
     // Read an identifier or keyword from the source code
     readIdentifierOrKeyword() {
         let text = "";
+        const line = this.line;
+        const column = this.column;
 
         while (this.currentChar && (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))) {
             text += this.currentChar;
+
             this.advance();
         }
         // #### check if the text is a boolean ####
@@ -115,38 +123,44 @@ export default class Lexer {
         // #### check if the text is a keyword ####
         if (text && KEYWORDS[text]) {
 
-            return { type: KEYWORDS[text], value: text , line: this.line, column: this.column}
+            return { type: KEYWORDS[text], value: text, line, column }
         }
         // #### return identifier 
-        return { type: "IDENTIFIER", value: text, line: this.line, column: this.column }
+        return { type: "IDENTIFIER", value: text, line, column }
     }
 
     readOperator() {
         const twoCharOp = this.currentChar + this.peek();
         // #### Check for multiple operators ####
         if (MULTI_OPS[twoCharOp]) {
+            const line = this.line;
+            const column = this.column;
             let value = twoCharOp;
             let type = MULTI_OPS[twoCharOp];
             this.advance();
             this.advance();
-            return { type, value, line: this.line, column: this.column }
+            return { type, value, line, column }
         }
 
         // #### Single operators ####
         if (SINGLE_OPS[this.currentChar]) {
             let value = this.currentChar;
             let type = SINGLE_OPS[this.currentChar];
+            const line = this.line;
+            const column = this.column;
             this.advance();
-            return { type, value, line:this.line, column:this.column }
+            return { type, value, line, column }
         }
         return null;
     }
     readProgramSymbols() {
         if (this.currentChar && PSYMBOLS[this.currentChar]) {
+            const line = this.line;
+            const column = this.column;
             let value = this.currentChar;
             let type = PSYMBOLS[this.currentChar];
             this.advance();
-            return { type, value,  line:this.line, column:this.column }
+            return { type, value, line, column }
         }
         return null;
     }
