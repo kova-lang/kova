@@ -5,24 +5,24 @@ export default class Parser {
     constructor() {
         this.tokens = [];
         this.currentPos = 0
-        this.currentToken = this.tokens? this.tokens[0] : null;
+        this.currentToken = this.tokens ? this.tokens[0] : null;
     }
 
     // #### Advance to the next token in the token stream ####
     advance() {
         this.currentPos++;
-        if (this.currentPos < this.tokens.length){
+        if (this.currentPos < this.tokens.length) {
             this.currentToken = this.tokens[this.currentPos];
         }
-       else{
-            this.currentToken = {type: "EOF"}
-       }
+        else {
+            this.currentToken = { type: "EOF" }
+        }
     }
 
     // #### Expect a specific token type and advance if it matches, otherwise throw an error ####
     expect(type) {
-        if (!this.currentToken  || this.currentToken.type !== type) {
-            throw new Error(`Expected ${type} but got ${this.currentToken.type? this.currentToken.type : "null"}`)
+        if (!this.currentToken || this.currentToken.type !== type) {
+            throw new Error(`Expected ${type} but got ${this.currentToken.type ? this.currentToken.type : "null"}`)
         }
         this.advance();
     };
@@ -31,7 +31,7 @@ export default class Parser {
     parseProgram(tokens) {
         this.tokens = tokens;
         this.currentPos = 0
-        this.currentToken = this.tokens? this.tokens[0] : null;
+        this.currentToken = this.tokens ? this.tokens[0] : null;
 
         const body = [];
 
@@ -63,6 +63,9 @@ export default class Parser {
             case "LBRACE":
                 return this.parseBlock();
 
+            case "RETURN":
+                return this.parseReturnStatement();
+
             default:
                 return this.parseExpressionStatement();
         }
@@ -85,17 +88,30 @@ export default class Parser {
             init
         };
     }
-    // #### parse if statement
+    // #### parse if,else if, and else statement
     parseIfStatement() {
         this.expect("IF");
 
         const test = this.parseExpression();
         const consequent = this.parseBlock();
 
+        let alternate = null;
+
+        if (this.currentToken.type === "ELSE") {
+            this.advance();
+
+            if (this.currentToken.type === "IF") {
+                alternate = this.parseIfStatement(); // else if
+            } else {
+                alternate = this.parseBlock();
+            }
+        }
+
         return {
             type: "IfStatement",
             test,
-            consequent
+            consequent,
+            alternate
         };
     }
 
@@ -338,10 +354,17 @@ export default class Parser {
 
         if (token.type === "IDENTIFIER") {
             this.advance();
-            return {
+
+            let node = {
                 type: "Identifier",
                 name: token.value
             };
+            // function call detection
+            while (this.currentToken.type === "LPAREN") {
+                node = this.finishCallExpression(node);
+            }
+
+            return node;
         }
 
         if (token.type === "LPAREN") {
@@ -357,5 +380,40 @@ export default class Parser {
         throw new Error(`Unexpected token: ${token.type}`);
     }
 
+    // #### Parse return statement ####
+    parseReturnStatement() {
+        this.expect("RETURN");
+
+        const argument = this.parseExpression();
+
+        return {
+            type: "ReturnStatement",
+            argument
+        };
+    }
+
+    // Parse call expression
+    finishCallExpression(callee) {
+        this.expect("LPAREN");
+
+        const args = [];
+
+        if (this.currentToken.type !== "RPAREN") {
+            args.push(this.parseExpression());
+            console.log(this.currentToken.type);
+            while (this.currentToken.type === "COMMA") {
+                this.advance();
+                args.push(this.parseExpression());
+            }
+        }
+
+        this.expect("RPAREN");
+
+        return {
+            type: "CallExpression",
+            callee,
+            arguments: args
+        };
+    }
 
 };

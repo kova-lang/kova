@@ -3,7 +3,8 @@ import Parser from "./parser/parser.js";
 import SemanticAnalyzer from "./semantic/semanticAnalyzer.js";
 import Interpreter from "./interpreter/interpreter.js";
 
-export function runKova(code, externals = {}) {
+
+export function runKova(code, externals = {}, externalSignatures = {}) {
 
     const lexer = new Lexer(code);
     const tokens = lexer.tokenize();
@@ -11,7 +12,7 @@ export function runKova(code, externals = {}) {
     const parser = new Parser();
     const ast = parser.parseProgram(tokens);
 
-    const semantic = new SemanticAnalyzer();
+    const semantic = new SemanticAnalyzer(externals, externalSignatures);
     semantic.analyze(ast);
 
     const interpreter = new Interpreter(externals);

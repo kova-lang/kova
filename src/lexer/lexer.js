@@ -9,10 +9,22 @@ export default class Lexer {
         this.code = code || ""; // The source code to be tokenized
         this.position = 0; // Current position in the source code 
         this.currentChar = this.code.length ? this.code[0] : null; // Current character being analyzed
+
+        // For source location tracking
+        this.line = 1;
+        this.column = 1;
     }
 
     // Move to the next character in the source code 
     advance() {
+        if (this.currentChar === "\n") {
+            this.line++;
+            this.column = 1
+        }
+        else {
+            this.column++;
+        }
+
         this.position++;
         this.currentChar = this.position < this.code.length ? this.code[this.position] : null;
     };
@@ -71,7 +83,7 @@ export default class Lexer {
                 `Invalid identifier: identifiers cannot start with a number (${number}${this.currentChar}...)`
             );
         }
-        return { type: "NUMBER", value: Number(number) }
+        return { type: "NUMBER", value: Number(number), line: this.line, column: this.column }
     }
     // Read a string token from the source code
     readString() {
@@ -85,7 +97,7 @@ export default class Lexer {
             throw new Error('Expected ["] at the closing of the string value ')
         }
         this.advance();
-        return { type: "STRING", value: string }
+        return { type: "STRING", value: string, line: this.line, column: this.column }
     }
 
     // Read an identifier or keyword from the source code
@@ -106,7 +118,7 @@ export default class Lexer {
             return { type: KEYWORDS[text], value: text }
         }
         // #### return identifier 
-        return { type: "IDENTIFIER", value: text }
+        return { type: "IDENTIFIER", value: text, line: this.line, column: this.column }
     }
 
     readOperator() {
@@ -117,7 +129,7 @@ export default class Lexer {
             let type = MULTI_OPS[twoCharOp];
             this.advance();
             this.advance();
-            return { type, value }
+            return { type, value, line: this.line, column: this.column }
         }
 
         // #### Single operators ####
@@ -125,7 +137,7 @@ export default class Lexer {
             let value = this.currentChar;
             let type = SINGLE_OPS[this.currentChar];
             this.advance();
-            return { type, value }
+            return { type, value, line:this.line, column:this.column }
         }
         return null;
     }
@@ -134,7 +146,7 @@ export default class Lexer {
             let value = this.currentChar;
             let type = PSYMBOLS[this.currentChar];
             this.advance();
-            return { type, value }
+            return { type, value,  line:this.line, column:this.column }
         }
         return null;
     }
