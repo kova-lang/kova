@@ -1,143 +1,117 @@
-// Parser.js
-
-// #### main parser class ####
 export default class Parser {
     constructor() {
         this.tokens = [];
-        this.currentPos = 0
-        this.currentToken = this.tokens ? this.tokens[0] : null;
+        this.currentPos = 0;
+        this.currentToken = null;
     }
 
-    // #### Advance to the next token in the token stream ####
     advance() {
         this.currentPos++;
-        if (this.currentPos < this.tokens.length) {
-            this.currentToken = this.tokens[this.currentPos];
-        }
-        else {
-            this.currentToken = { type: "EOF" }
-        }
+        this.currentToken = this.currentPos < this.tokens.length
+            ? this.tokens[this.currentPos]
+            : { type: "EOF" };
     }
 
-    // #### Expect a specific token type and advance if it matches, otherwise throw an error ####
     expect(type) {
         if (!this.currentToken || this.currentToken.type !== type) {
-            throw new Error(`Expected ${type} but got ${this.currentToken.type ? this.currentToken.type : "null"}`)
+            throw new Error(
+                `Expected ${type} but got ${this.currentToken?.type ?? "null"}`
+            );
         }
         this.advance();
-    };
-
-    // #### parse program ####
-    parseProgram(tokens) {
-        this.tokens = tokens;
-        this.currentPos = 0
-        this.currentToken = this.tokens ? this.tokens[0] : null;
-
-        const body = [];
-
-        while (this.currentToken.type && this.currentToken.type !== "EOF") {
-            body.push(this.parseStatement());
-        }
-
-        return {
-            type: "Program",
-            body
-        };
     }
 
-    // #### parse Statement ####
+    parseProgram(tokens) {
+        this.tokens = tokens;
+        this.currentPos = 0;
+        this.currentToken = this.tokens[0] ?? { type: "EOF" };
+
+        const body = [];
+        while (this.currentToken.type !== "EOF") {
+            body.push(this.parseStatement());
+        }
+        return { type: "Program", body };
+    }
+
     parseStatement() {
         switch (this.currentToken.type) {
-            case "LET":
-                return this.parseVariableDeclaration();
-
-            case "IF":
-                return this.parseIfStatement();
-
+            case "LET": return this.parseVariableDeclaration();
+            case "IF": return this.parseIfStatement();
             case "POST_HTTP":
             case "GET_HTTP":
             case "PUT_HTTP":
-            case "DELETE_HTTP":
-                return this.parseHttpStatement();
-
-            case "LBRACE":
-                return this.parseBlock();
-
-            case "RETURN":
-                return this.parseReturnStatement();
-
-            default:
-                return this.parseExpressionStatement();
+            case "DELETE_HTTP": return this.parseHttpStatement();
+            case "LBRACE": return this.parseBlock();
+            case "RETURN": return this.parseReturnStatement();
+            default: return this.parseExpressionStatement();
         }
     }
 
-    //#### parse variable declarion
     parseVariableDeclaration() {
+        const letToken = this.currentToken;          // capture location
         this.expect("LET");
 
         const id = this.currentToken;
         this.expect("IDENTIFIER");
-
-        this.expect("ASSIGN"); // "=" token
+        this.expect("ASSIGN");
 
         const init = this.parseExpression();
 
         return {
             type: "VariableDeclaration",
-            id: { type: "Identifier", name: id.value },
-            init
+            id: { type: "Identifier", name: id.value, line: id.line, column: id.column },
+            init,
+            line: letToken.line,
+            column: letToken.column,
         };
     }
-    // #### parse if,else if, and else statement
+
     parseIfStatement() {
+        const ifToken = this.currentToken;           // capture location
         this.expect("IF");
 
         const test = this.parseExpression();
         const consequent = this.parseBlock();
-
         let alternate = null;
 
         if (this.currentToken.type === "ELSE") {
             this.advance();
-
-            if (this.currentToken.type === "IF") {
-                alternate = this.parseIfStatement(); // else if
-            } else {
-                alternate = this.parseBlock();
-            }
+            alternate = this.currentToken.type === "IF"
+                ? this.parseIfStatement()
+                : this.parseBlock();
         }
 
         return {
             type: "IfStatement",
             test,
             consequent,
-            alternate
+            alternate,
+            line: ifToken.line,
+            column: ifToken.column,
         };
     }
 
-    // ### Block ####
     parseBlock() {
-
+        const brace = this.currentToken;             // capture location
         this.expect("LBRACE");
 
         const body = [];
-
         while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
             body.push(this.parseStatement());
         }
-
         this.expect("RBRACE");
 
         return {
             type: "BlockStatement",
-            body
+            body,
+            line: brace.line,
+            column: brace.column,
         };
     }
 
-    // ### POST statement
     parseHttpStatement() {
         const verb = this.currentToken;
-        this.advance(); // consume verb
+        this.advance();
 
         const urlToken = this.currentToken;
         this.expect("STRING");
@@ -145,275 +119,228 @@ export default class Parser {
         return {
             type: "HttpStatement",
             method: verb.value,
-            url: urlToken.value
+            url: urlToken.value,
+            line: verb.line,
+            column: verb.column,
         };
     }
 
-    // #### Expression Statement
     parseExpressionStatement() {
+        const token = this.currentToken;
         const expression = this.parseExpression();
-
         return {
             type: "ExpressionStatement",
-            expression
+            expression,
+            line: token.line,
+            column: token.column,
         };
     }
 
-    // #### Expression system entry
+    parseReturnStatement() {
+        const retToken = this.currentToken;          // capture location
+        this.expect("RETURN");
+
+        const argument = this.parseExpression();
+        return {
+            type: "ReturnStatement",
+            argument,
+            line: retToken.line,
+            column: retToken.column,
+        };
+    }
+
+    //  Expression precedence chain
+
     parseExpression() {
-        return this.parseLogicalOr();
+        return this.parseAssignment();
     }
 
-    // Expression precedence
+    parseAssignment() {
+        const left = this.parseLogicalOr();
 
-    // // ####  Logical OR
-    parseLogicalOr() {
-        let left = this.parseLogicalAnd();
-
-        while (this.currentToken.type === "OR") {
-            const operator = this.currentToken;
+        if (this.currentToken.type === "ASSIGN") {
+            const op = this.currentToken;
             this.advance();
+            const right = this.parseAssignment();
 
-            const right = this.parseLogicalAnd();
-
-            left = {
-                type: "BinaryExpression",
-                operator: operator.value,
-                left,
-                right
-            };
-        }
-
-        return left;
-    }
-    // // ####  Logical AND
-    parseLogicalAnd() {
-        let left = this.parseEquality();
-
-        while (this.currentToken.type === "AND") {
-            const operator = this.currentToken;
-            this.advance();
-
-            const right = this.parseEquality();
-
-            left = {
-                type: "BinaryExpression",
-                operator: operator.value,
-                left,
-                right
-            };
-        }
-
-        return left;
-    }
-    // // ####  EQUALITY
-    parseEquality() {
-        let left = this.parseComparison();
-
-        while (
-            this.currentToken.type === "EQ" ||
-            this.currentToken.type === "NEQ"
-        ) {
-            const operator = this.currentToken;
-            this.advance();
-
-            const right = this.parseComparison();
-
-            left = {
-                type: "BinaryExpression",
-                operator: operator.value,
-                left,
-                right
-            };
-        }
-
-        return left;
-    }
-    // // ####  Comparison
-    parseComparison() {
-        let left = this.parseTerm();
-
-        while (
-            this.currentToken.type === "GT" ||
-            this.currentToken.type === "LT" ||
-            this.currentToken.type === "GTE" ||
-            this.currentToken.type === "LTE"
-        ) {
-            const operator = this.currentToken;
-            this.advance();
-
-            const right = this.parseTerm();
-
-            left = {
-                type: "BinaryExpression",
-                operator: operator.value,
-                left,
-                right
-            };
-        }
-
-        return left;
-    }
-
-    // #### Parse Term
-    parseTerm() {
-        let left = this.parseFactor();
-
-        while (
-            this.currentToken.type === "PLUS" ||
-            this.currentToken.type === "MINUS"
-        ) {
-            const operator = this.currentToken;
-            this.advance();
-
-            const right = this.parseFactor();
-
-            left = {
-                type: "BinaryExpression",
-                operator: operator.value,
-                left,
-                right
-            };
-        }
-
-        return left;
-    }
-
-    // #### Parse Factor
-    parseFactor() {
-        let left = this.parseUnary();
-
-        while (
-            this.currentToken.type === "STAR" ||
-            this.currentToken.type === "SLASH"
-        ) {
-            const operator = this.currentToken;
-            this.advance();
-
-            const right = this.parseUnary();
-
-            left = {
-                type: "BinaryExpression",
-                operator: operator.value,
-                left,
-                right
-            };
-        }
-
-        return left;
-    }
-
-    // #### parse unary  - || !
-    parseUnary() {
-        if (
-            this.currentToken.type === "BANG" ||
-            this.currentToken.type === "MINUS"
-        ) {
-            const operator = this.currentToken;
-            this.advance();
-
-            const argument = this.parseUnary();
+            if (left.type !== "Identifier") {
+                throw new Error("Invalid assignment target");
+            }
 
             return {
-                type: "UnaryExpression",
-                operator: operator.value,
-                argument
+                type: "AssignmentExpression",
+                left,
+                right,
+                line: op.line,
+                column: op.column,
             };
         }
 
+        return left;
+    }
+
+    parseLogicalOr() {
+        let left = this.parseLogicalAnd();
+        while (this.currentToken.type === "OR") {
+            const op = this.currentToken;
+            this.advance();
+            const right = this.parseLogicalAnd();
+            left = {
+                type: "BinaryExpression", operator: op.value, left, right,
+                line: op.line, column: op.column
+            };
+        }
+        return left;
+    }
+
+    parseLogicalAnd() {
+        let left = this.parseEquality();
+        while (this.currentToken.type === "AND") {
+            const op = this.currentToken;
+            this.advance();
+            const right = this.parseEquality();
+            left = {
+                type: "BinaryExpression", operator: op.value, left, right,
+                line: op.line, column: op.column
+            };
+        }
+        return left;
+    }
+
+    parseEquality() {
+        let left = this.parseComparison();
+        while (this.currentToken.type === "EQ" || this.currentToken.type === "NEQ") {
+            const op = this.currentToken;
+            this.advance();
+            const right = this.parseComparison();
+            left = {
+                type: "BinaryExpression", operator: op.value, left, right,
+                line: op.line, column: op.column
+            };
+        }
+        return left;
+    }
+
+    parseComparison() {
+        let left = this.parseTerm();
+        while (["GT", "LT", "GTE", "LTE"].includes(this.currentToken.type)) {
+            const op = this.currentToken;
+            this.advance();
+            const right = this.parseTerm();
+            left = {
+                type: "BinaryExpression", operator: op.value, left, right,
+                line: op.line, column: op.column
+            };
+        }
+        return left;
+    }
+
+    parseTerm() {
+        let left = this.parseFactor();
+        while (this.currentToken.type === "PLUS" || this.currentToken.type === "MINUS") {
+            const op = this.currentToken;
+            this.advance();
+            const right = this.parseFactor();
+            left = {
+                type: "BinaryExpression", operator: op.value, left, right,
+                line: op.line, column: op.column
+            };
+        }
+        return left;
+    }
+
+    parseFactor() {
+        let left = this.parseUnary();
+        while (this.currentToken.type === "STAR" || this.currentToken.type === "SLASH") {
+            const op = this.currentToken;
+            this.advance();
+            const right = this.parseUnary();
+            left = {
+                type: "BinaryExpression", operator: op.value, left, right,
+                line: op.line, column: op.column
+            };
+        }
+        return left;
+    }
+
+    parseUnary() {
+        if (this.currentToken.type === "BANG" || this.currentToken.type === "MINUS") {
+            const op = this.currentToken;
+            this.advance();
+            const argument = this.parseUnary();
+            return {
+                type: "UnaryExpression", operator: op.value, argument,
+                line: op.line, column: op.column
+            };
+        }
         return this.parsePrimary();
     }
 
-    // #### Primary - base layer
     parsePrimary() {
         const token = this.currentToken;
 
         if (token.type === "NUMBER") {
             this.advance();
             return {
-                type: "Literal",
-                value: token.value
+                type: "Literal", value: token.value,
+                line: token.line, column: token.column
             };
         }
-
         if (token.type === "STRING") {
             this.advance();
             return {
-                type: "Literal",
-                value: token.value
+                type: "Literal", value: token.value,
+                line: token.line, column: token.column
             };
         }
-
         if (token.type === "BOOLEAN") {
             this.advance();
             return {
-                type: "Literal",
-                value: token.value
+                type: "Literal", value: token.value,
+                line: token.line, column: token.column
             };
         }
-
         if (token.type === "IDENTIFIER") {
             this.advance();
-
             let node = {
-                type: "Identifier",
-                name: token.value
+                type: "Identifier", name: token.value,
+                line: token.line, column: token.column
             };
-            // function call detection
             while (this.currentToken.type === "LPAREN") {
                 node = this.finishCallExpression(node);
             }
-
             return node;
         }
-
         if (token.type === "LPAREN") {
             this.advance();
-
             const expr = this.parseExpression();
-
             this.expect("RPAREN");
-
-            return expr;
+            return expr;                              // location already on inner expr
         }
 
         throw new Error(`Unexpected token: ${token.type}`);
     }
 
-    // #### Parse return statement ####
-    parseReturnStatement() {
-        this.expect("RETURN");
-
-        const argument = this.parseExpression();
-
-        return {
-            type: "ReturnStatement",
-            argument
-        };
-    }
-
-    // Parse call expression
     finishCallExpression(callee) {
+        const paren = this.currentToken;
         this.expect("LPAREN");
 
         const args = [];
-
         if (this.currentToken.type !== "RPAREN") {
             args.push(this.parseExpression());
-            console.log(this.currentToken.type);
             while (this.currentToken.type === "COMMA") {
                 this.advance();
                 args.push(this.parseExpression());
             }
         }
-
         this.expect("RPAREN");
 
         return {
             type: "CallExpression",
             callee,
-            arguments: args
+            arguments: args,
+            line: paren.line,
+            column: paren.column,
         };
     }
-
-};
+}

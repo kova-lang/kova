@@ -8,14 +8,14 @@ export default class Interpreter {
     }
 
     interpret(ast) {
-        this.enterScope(); // global scope
-        this.visit(ast);
-        this.exitScope();
-        return {
-            returnValue: this.returnValue,
-            output: this.output
-        };
-    }
+    this.returnValue = undefined;
+    this.shouldReturn = false;
+    this.output = [];
+    this.enterScope();
+    this.visit(ast);
+    this.exitScope();
+    return { returnValue: this.returnValue, output: this.output };
+}
 
     // Scope Management ####
     enterScope() {

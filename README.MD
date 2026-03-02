@@ -2,6 +2,8 @@
 
 Kova is a lightweight, expressive, and modern programming language designed for clarity, speed, and extensibility. Inspired by simplicity-first principles, Kova introduces a clean syntax, web-native primitives, and a predictable execution model that makes it easy for developers to write safe and fast code.
 
+As AI systems become more autonomous, we need languages where AI uncertainty is a first-class type, not a runtime surprise. Kova is a proof-of-concept that deterministic control flow and probabilistic AI calls can coexist with static guarantees — making AI programs easier to audit, debug, and reason about formally.
+
 ---
 
 ##  Overview
