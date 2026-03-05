@@ -9,10 +9,8 @@ export default class SemanticAnalyzer {
         this.currentReturnType = null;
     }
 
-    // -----------------------------
-    // Probabilistic Type Helpers
-    // -----------------------------
 
+    // Probabilistic Type Helpers
     Prob(inner) {
         return { kind: "prob", inner };
     }
@@ -25,7 +23,7 @@ export default class SemanticAnalyzer {
         return type.inner;
     }
 
-    // -----------------------------
+
 
     analyze(ast) {
         this.enterScope();
@@ -90,7 +88,7 @@ export default class SemanticAnalyzer {
                 const rightType = this.visit(node.right);
                 const op = node.operator;
 
-                // 🚫 Prevent probabilistic values in binary expressions
+                //  Prevent probabilistic values in binary expressions
                 if (this.isProb(leftType) || this.isProb(rightType)) {
                     this.error("Probabilistic values must be resolved before use", node);
                 }
@@ -143,7 +141,7 @@ export default class SemanticAnalyzer {
             case "IfStatement": {
                 const testType = this.visit(node.test);
 
-                // 🚫 NEW RULE
+                //  NEW RULE
                 if (this.isProb(testType)) {
                     this.error(
                         "Probabilistic value cannot be used directly in 'if' condition. Use resolve().",
@@ -194,9 +192,8 @@ export default class SemanticAnalyzer {
 
                 const fnName = node.callee.name;
 
-                // -----------------------------
+
                 // resolve(prob<T>) -> T
-                // -----------------------------
                 if (fnName === "resolve") {
                     if (node.arguments.length !== 1) {
                         this.error("resolve() takes exactly one argument", node);
@@ -211,9 +208,8 @@ export default class SemanticAnalyzer {
                     return this.unwrapProb(argType);
                 }
 
-                // -----------------------------
+
                 // External function validation
-                // -----------------------------
                 if (!this.externals[fnName]) {
                     this.error(`Unknown function "${fnName}"`);
                 }
@@ -237,9 +233,8 @@ export default class SemanticAnalyzer {
                         }
                     });
 
-                    // -----------------------------
-                    // 🔴 AI returns prob<T>
-                    // -----------------------------
+
+                    //  AI returns prob<T>
                     if (fnName === "AI") {
                         return this.Prob(signature.returns);
                     }
