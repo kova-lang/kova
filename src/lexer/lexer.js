@@ -1,211 +1,228 @@
-// #### Kova-lexer ####
-import { KEYWORDS, SINGLE_OPS, PSYMBOLS, MULTI_OPS } from "../../lib/constants/store.js";
-import { LETTER_RGX, WHITESPACE_RGX, NUMBER_RGX, OP_RGX } from "../../lib/regex/index.js";
-
-
+import {
+    KEYWORDS,
+    SINGLE_OPS,
+    PSYMBOLS,
+    MULTI_OPS,
+} from "../../lib/constants/store.js";
+import {
+    LETTER_RGX,
+    NUMBER_RGX,
+    OP_RGX,
+} from "../../lib/regex/index.js";
 
 export default class Lexer {
     constructor(code) {
-        this.code = code || ""; // The source code to be tokenized
-        this.position = 0; // Current position in the source code 
-        this.currentChar = this.code.length ? this.code[0] : null; // Current character being analyzed
-
-        // For source location tracking
+        this.code = code || "";
+        this.position = 0;
+        this.currentChar = this.code.length ? this.code[0] : null;
         this.line = 1;
         this.column = 1;
     }
 
-    // Move to the next character in the source code 
     advance() {
         if (this.currentChar === "\n") {
             this.line++;
-            this.column = 1
-        }
-        else {
+            this.column = 1;
+        } else {
             this.column++;
         }
-
         this.position++;
-        this.currentChar = this.position < this.code.length ? this.code[this.position] : null;
-    };
-    // Lookahead function to peek at the next character without adavcning the position
-    peek() {
-        if (this.position + 1 >= this.code.length) {
-            return null
-        }
-        return this.code[this.position + 1]
-    };
+        this.currentChar =
+            this.position < this.code.length ? this.code[this.position] : null;
+    }
 
-    // Unified skip for whitespace and comments
+    peek(offset = 1) {
+        const pos = this.position + offset;
+        return pos < this.code.length ? this.code[pos] : null;
+    }
+
     skipIgnorable() {
         while (this.currentChar !== null) {
-
-            // Skip spaces, tabs, carriage returns, newlines
-            if (this.currentChar === " " || this.currentChar === "\t" || this.currentChar === "\r" || this.currentChar === "\n") {
+            if ([" ", "\t", "\r", "\n"].includes(this.currentChar)) {
                 this.advance();
                 continue;
             }
-
-            // Skip hash-style comment
+            // # comment
             if (this.currentChar === "#") {
-                this.advance(); // skip '#'
-                while (this.currentChar !== "\n" && this.currentChar !== null) {
-                    this.advance(); // skip comment content
-                }
-                continue; // will skip newline on next iteration
+                while (this.currentChar !== "\n" && this.currentChar !== null)
+                    this.advance();
+                continue;
             }
-
-            // Skip double-slash comment
+            // // comment
             if (this.currentChar === "/" && this.peek() === "/") {
-                this.advance(); // skip first '/'
-                this.advance(); // skip second '/'
-                while (this.currentChar !== "\n" && this.currentChar !== null) {
-                    this.advance(); // skip comment content
-                }
-                continue; // newline will be skipped in next iteration
+                this.advance();
+                this.advance();
+                while (this.currentChar !== "\n" && this.currentChar !== null)
+                    this.advance();
+                continue;
             }
-
-            // If none of the above, stop skipping
+            // /* block comment */
+            if (this.currentChar === "/" && this.peek() === "*") {
+                this.advance();
+                this.advance();
+                while (
+                    this.currentChar !== null &&
+                    !(this.currentChar === "*" && this.peek() === "/")
+                ) {
+                    this.advance();
+                }
+                if (this.currentChar !== null) {
+                    this.advance(); // *
+                    this.advance(); // /
+                }
+                continue;
+            }
             break;
         }
     }
 
-    //  Read a number token from the source code
     readNumber() {
         let number = "";
+        let isFloat = false;
         const line = this.line;
         const column = this.column;
+
         while (this.currentChar && NUMBER_RGX.test(this.currentChar)) {
             number += this.currentChar;
             this.advance();
         }
-        // INVALID: number immediately followed by identifier start
+
+        // float support: 3.14
+        if (this.currentChar === "." && this.peek() && NUMBER_RGX.test(this.peek())) {
+            isFloat = true;
+            number += this.currentChar;
+            this.advance();
+            while (this.currentChar && NUMBER_RGX.test(this.currentChar)) {
+                number += this.currentChar;
+                this.advance();
+            }
+        }
+
         if (this.currentChar && LETTER_RGX.test(this.currentChar)) {
             throw new Error(
                 `Invalid identifier: identifiers cannot start with a number (${number}${this.currentChar}...)`
             );
         }
-        return { type: "NUMBER", value: Number(number), line, column }
+
+        return { type: "NUMBER", value: Number(number), float: isFloat, line, column };
     }
-    // Read a string token from the source code
-    readString() {
+
+    readString(quote = '"') {
         let string = "";
         const line = this.line;
         const column = this.column;
+        this.advance(); // opening quote
 
-        this.advance();
-        while (this.currentChar && this.currentChar !== '"') {
-            string += this.currentChar;
+        while (this.currentChar && this.currentChar !== quote) {
+            // escape sequences
+            if (this.currentChar === "\\") {
+                this.advance();
+                const escapes = { n: "\n", t: "\t", r: "\r", "\\": "\\", '"': '"', "'": "'" };
+                string += escapes[this.currentChar] ?? this.currentChar;
+            } else {
+                string += this.currentChar;
+            }
             this.advance();
         }
-        if (this.currentChar !== '"') {
-            throw new Error('Expected ["] at the closing of the string value ')
+
+        if (this.currentChar !== quote) {
+            throw new Error(`Unterminated string literal starting at line ${line}`);
         }
-        this.advance();
-        return { type: "STRING", value: string, line, column }
+        this.advance(); // closing quote
+        return { type: "STRING", value: string, line, column };
     }
 
-    // Read an identifier or keyword from the source code
     readIdentifierOrKeyword() {
         let text = "";
         const line = this.line;
         const column = this.column;
 
-        while (this.currentChar && (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))) {
+        while (
+            this.currentChar &&
+            (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))
+        ) {
             text += this.currentChar;
-
             this.advance();
         }
-        // #### check if the text is a boolean ####
-        if (text === "true" || text === "false") {
-            return { type: "BOOLEAN", value: text === "true" };
-        }
-        // #### check if the text is a keyword ####
-        if (text && KEYWORDS[text]) {
 
-            return { type: KEYWORDS[text], value: text, line, column }
+        if (text === "true" || text === "false") {
+            return { type: "BOOLEAN", value: text === "true", line, column };
         }
-        // #### return identifier 
-        return { type: "IDENTIFIER", value: text, line, column }
+        if (text === "null") {
+            return { type: "NULL", value: null, line, column };
+        }
+        if (Object.prototype.hasOwnProperty.call(KEYWORDS, text)) {
+            return { type: KEYWORDS[text], value: text, line, column };
+        }
+        return { type: "IDENTIFIER", value: text, line, column };
     }
 
     readOperator() {
         const twoCharOp = this.currentChar + this.peek();
-        // #### Check for multiple operators ####
         if (MULTI_OPS[twoCharOp]) {
             const line = this.line;
             const column = this.column;
-            let value = twoCharOp;
-            let type = MULTI_OPS[twoCharOp];
             this.advance();
             this.advance();
-            return { type, value, line, column }
+            return { type: MULTI_OPS[twoCharOp], value: twoCharOp, line, column };
         }
-
-        // #### Single operators ####
         if (SINGLE_OPS[this.currentChar]) {
-            let value = this.currentChar;
-            let type = SINGLE_OPS[this.currentChar];
             const line = this.line;
             const column = this.column;
+            const value = this.currentChar;
             this.advance();
-            return { type, value, line, column }
+            return { type: SINGLE_OPS[value], value, line, column };
         }
         return null;
     }
+
     readProgramSymbols() {
         if (this.currentChar && PSYMBOLS[this.currentChar]) {
             const line = this.line;
             const column = this.column;
-            let value = this.currentChar;
-            let type = PSYMBOLS[this.currentChar];
+            const value = this.currentChar;
             this.advance();
-            return { type, value, line, column }
+            return { type: PSYMBOLS[value], value, line, column };
         }
         return null;
     }
+
     tokenize() {
         const tokens = [];
+
         while (this.currentChar !== null) {
-
-            // #### Check Ignorables ####
-            this.skipIgnorable()
+            this.skipIgnorable();
             if (this.currentChar === null) break;
 
-            if (this.currentChar === null) break;
-            // #### Check for number ####
             if (NUMBER_RGX.test(this.currentChar)) {
-                tokens.push(this.readNumber())
+                tokens.push(this.readNumber());
                 continue;
             }
-            // #### Check for string ####
-            if (this.currentChar === '"') {
-                tokens.push(this.readString())
+            if (this.currentChar === '"' || this.currentChar === "'") {
+                tokens.push(this.readString(this.currentChar));
                 continue;
             }
-            // #### Check for Identifier or keywords ####
             if (LETTER_RGX.test(this.currentChar)) {
                 tokens.push(this.readIdentifierOrKeyword());
                 continue;
             }
-            // #### Check for operator ####
             if (OP_RGX.test(this.currentChar)) {
-                const opToken = this.readOperator();
-                if (!opToken) {
-                    throw new Error(`Unexpected operator sequence: ${this.currentChar}`);
-                }
-                tokens.push(opToken);
+                const op = this.readOperator();
+                if (!op) throw new Error(`Unexpected operator: ${this.currentChar}`);
+                tokens.push(op);
                 continue;
             }
-            // #### Check for other programming symbols ####
             if (PSYMBOLS[this.currentChar]) {
-                tokens.push(this.readProgramSymbols())
+                tokens.push(this.readProgramSymbols());
                 continue;
             }
-            // #### if char does not match any ####
-            throw new Error(`Unexpected character: ${this.currentChar}`);
+
+            throw new Error(
+                `Unexpected character '${this.currentChar}' at line ${this.line}, column ${this.column}`
+            );
         }
+
         tokens.push({ type: "EOF", value: null });
         return tokens;
     }
-}        
+}
