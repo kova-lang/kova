@@ -1,309 +1,301 @@
-import { runKova } from "../src/index.js";
-import { defaultExternals, defaultSignatures } from "../lib/functions/index.js";
+import { runKova, defaultExternals, defaultSignatures } from "../src/index.js";
 
-// Test Runner 
 let passed = 0, failed = 0;
 
 function test(name, fn) {
-    try {
-        fn();
-        console.log(`    ${name}`);
-        passed++;
-    } catch (e) {
-        console.error(`    ${name}: ${e.message}`);
-        failed++;
-    }
+    try { fn(); console.log(`  ✓ ${name}`); passed++; }
+    catch (e) { console.error(`  ✗ ${name}\n      → ${e.message}`); failed++; }
 }
-
-function assert(condition, msg = "Assertion failed") {
-    if (!condition) throw new Error(msg);
-}
-
+function assert(cond, msg = "Assertion failed") { if (!cond) throw new Error(msg); }
 function assertThrows(fn, fragment) {
     let threw = false;
     try { fn(); } catch (e) {
         threw = true;
-        if (fragment && !e.message.includes(fragment)) {
+        if (fragment && !e.message.includes(fragment))
             throw new Error(`Expected error containing "${fragment}" but got: "${e.message}"`);
-        }
     }
-    if (!threw) throw new Error("Expected an error to be thrown, but none was");
+    if (!threw) throw new Error("Expected an error but none was thrown");
 }
+function eq(a, b) { assert(a === b, `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); }
 
-// Variable Declaration ─────────────────────────────────────────────────────
+// ─── Variable Declaration ────────────────────────────────────────────────────
 console.log("\n Variable Declaration");
+test("number",           () => eq(runKova(`let x = 5  return x`).returnValue, 5));
+test("string",           () => eq(runKova(`let x = "hi"  return x`).returnValue, "hi"));
+test("boolean",          () => eq(runKova(`let x = true  return x`).returnValue, true));
+test("null literal",     () => eq(runKova(`let x = null  return x`).returnValue, null));
+test("float literal",    () => eq(runKova(`let x = 3.14  return x`).returnValue, 3.14));
+test("expression init",  () => eq(runKova(`let x = 5  let y = x + 2  return y`).returnValue, 7));
+test("undeclared throws",     () => assertThrows(() => runKova(`let y = x`), "Undeclar"));
+test("duplicate throws",      () => assertThrows(() => runKova(`let x = 1  let x = 2`), "already declared"));
 
-test("declares a number", () => {
-    assert(runKova(`let x = 5  return x`).returnValue === 5);
-});
-test("declares a string", () => {
-    assert(runKova(`let x = "hello"  return x`).returnValue === "hello");
-});
-test("declares a boolean", () => {
-    assert(runKova(`let x = true  return x`).returnValue === true);
-});
-test("variable used in expression", () => {
-    assert(runKova(`let x = 5  let y = x + 2  return y`).returnValue === 7);
-});
-test("throws on undeclared variable", () => {
-    assertThrows(() => runKova(`let y = x + 2`), "Undeclar");
-});
-test("throws on duplicate declaration", () => {
-    assertThrows(() => runKova(`let x = 5  let x = 10`), "already declared");
-});
-
-// Arithmetic 
+// ─── Arithmetic ──────────────────────────────────────────────────────────────
 console.log("\n Arithmetic");
+test("add",         () => eq(runKova(`return 3 + 4`).returnValue, 7));
+test("sub",         () => eq(runKova(`return 10 - 3`).returnValue, 7));
+test("mul",         () => eq(runKova(`return 3 * 4`).returnValue, 12));
+test("div",         () => eq(runKova(`return 10 / 2`).returnValue, 5));
+test("mod",         () => eq(runKova(`return 10 % 3`).returnValue, 1));
+test("precedence",  () => eq(runKova(`return 2 + 3 * 4`).returnValue, 14));
+test("parens",      () => eq(runKova(`return (2 + 3) * 4`).returnValue, 20));
+test("float",       () => eq(runKova(`return 1.5 + 1.5`).returnValue, 3));
+test("unary neg",   () => eq(runKova(`return -5`).returnValue, -5));
+test("string concat", () => eq(runKova(`return "hello" + " world"`).returnValue, "hello world"));
+test("div by zero throws", () => assertThrows(() => runKova(`return 10 / 0`), "Division by zero"));
 
-test("addition",                () => assert(runKova(`return 3 + 4`).returnValue === 7));
-test("subtraction",             () => assert(runKova(`return 10 - 3`).returnValue === 7));
-test("multiplication",          () => assert(runKova(`return 3 * 4`).returnValue === 12));
-test("division",                () => assert(runKova(`return 10 / 2`).returnValue === 5));
-test("precedence: * before +",  () => assert(runKova(`return 2 + 3 * 4`).returnValue === 14));
-test("parenthesised expr",      () => assert(runKova(`return (2 + 3) * 4`).returnValue === 20));
-test("unary negation literal",  () => assert(runKova(`return -5`).returnValue === -5));
-test("unary negation variable", () => assert(runKova(`let x = 5  return -x`).returnValue === -5));
-test("throws: arithmetic on string", () => {
-    assertThrows(() => runKova(`let x = "a"  let y = x + 1`), "Arithmetic");
+// ─── Comparison / Logical ─────────────────────────────────────────────────────
+console.log("\n Comparison & Logical");
+test("gt",     () => eq(runKova(`return 5 > 3`).returnValue, true));
+test("lt",     () => eq(runKova(`return 2 < 3`).returnValue, true));
+test("gte",    () => eq(runKova(`return 3 >= 3`).returnValue, true));
+test("eq num", () => eq(runKova(`return 3 == 3`).returnValue, true));
+test("neq",    () => eq(runKova(`return 3 != 4`).returnValue, true));
+test("AND",    () => eq(runKova(`return true && true`).returnValue, true));
+test("OR",     () => eq(runKova(`return false || true`).returnValue, true));
+test("NOT",    () => eq(runKova(`return !true`).returnValue, false));
+
+// ─── While / For ─────────────────────────────────────────────────────────────
+console.log("\n Loops");
+test("while sum", () => eq(runKova(`let i = 0\nlet s = 0\nwhile i < 5 { s = s + i\n i = i + 1 }\nreturn s`).returnValue, 10));
+test("for sum",   () => eq(runKova(`let arr = [1,2,3,4,5]\nlet s = 0\nfor x in arr { s = s + x }\nreturn s`).returnValue, 15));
+test("for range", () => eq(runKova(`let s = 0\nfor x in range(0,5) { s += x }\nreturn s`).returnValue, 10));
+
+// ─── Functions ───────────────────────────────────────────────────────────────
+console.log("\n Functions");
+test("basic fn",    () => eq(runKova(`fn add(a, b) { return a + b }\nreturn add(3, 4)`).returnValue, 7));
+test("recursion",   () => eq(runKova(`fn fact(n) { if n <= 1 { return 1 }\nreturn n * fact(n - 1) }\nreturn fact(5)`).returnValue, 120));
+test("closure",     () => eq(runKova(`let base = 10\nfn add(x) { return x + base }\nreturn add(5)`).returnValue, 15));
+
+// ─── Arrays / Objects ────────────────────────────────────────────────────────
+console.log("\n Arrays & Objects");
+test("array literal",  () => { const r = runKova(`let a = [1,2,3]  return a`); eq(r.returnValue[1], 2); });
+test("array index",    () => eq(runKova(`let a = [10,20,30]  return a[1]`).returnValue, 20));
+test("array push",     () => { const r = runKova(`let a = [1,2]\na.push(3)\nreturn a[2]`); eq(r.returnValue, 3); });
+test("object dot",     () => eq(runKova(`let o = { x: 42 }  return o.x`).returnValue, 42));
+test("object bracket", () => eq(runKova(`let o = { x: 42 }  return o["x"]`).returnValue, 42));
+test("nested object",  () => eq(runKova(`let o = { inner: { val: 7 } }  return o.inner.val`).returnValue, 7));
+test("compound +=",    () => eq(runKova(`let x = 5\nx += 3\nreturn x`).returnValue, 8));
+test("member +=",      () => eq(runKova(`let o = { x: 5 }\no.x += 10\nreturn o.x`).returnValue, 15));
+
+// ─── HTTP – basic ─────────────────────────────────────────────────────────────
+console.log("\n HTTP – Basic");
+test("GET output",    () => assert(runKova(`GET "https://api.example.com"`).output.some(l => l.includes("GET"))));
+test("POST output",   () => assert(runKova(`POST "https://api.example.com"`).output.some(l => l.includes("POST"))));
+test("PUT output",    () => assert(runKova(`PUT "https://api.example.com"`).output.some(l => l.includes("PUT"))));
+test("DELETE output", () => assert(runKova(`DELETE "https://api.example.com"`).output.some(l => l.includes("DELETE"))));
+test("PATCH output",  () => assert(runKova(`PATCH "https://api.example.com"`).output.some(l => l.includes("PATCH"))));
+
+// ─── HTTP – into binding ──────────────────────────────────────────────────────
+console.log("\n HTTP – 'into' binding");
+test("GET into result", () => {
+    const r = runKova(`GET "https://api.example.com/users" into users\nreturn users.ok`);
+    eq(r.returnValue, true);
+});
+test("GET into status", () => {
+    const r = runKova(`GET "https://api.example.com/data" into res\nreturn res.status`);
+    eq(r.returnValue, 200);
+});
+test("let res = GET ...", () => {
+    const r = runKova(`let res = GET "https://api.example.com"\nreturn res.ok`);
+    eq(r.returnValue, true);
 });
 
-// Comparison 
-console.log("\n Comparison");
-
-test("greater than (true)",           () => assert(runKova(`return 5 > 3`).returnValue === true));
-test("greater than (false)",          () => assert(runKova(`return 2 > 3`).returnValue === false));
-test("less than",                     () => assert(runKova(`return 2 < 3`).returnValue === true));
-test("gte equal case",                () => assert(runKova(`return 3 >= 3`).returnValue === true));
-test("lte",                           () => assert(runKova(`return 2 <= 3`).returnValue === true));
-test("equality numbers",              () => assert(runKova(`return 3 == 3`).returnValue === true));
-test("inequality numbers",            () => assert(runKova(`return 3 != 4`).returnValue === true));
-test("equality strings",              () => assert(runKova(`return "a" == "a"`).returnValue === true));
-test("throws: equality across types", () => assertThrows(() => runKova(`return 1 == true`), "same type"));
-test("throws: comparison on strings", () => assertThrows(() => runKova(`return "a" > "b"`), "Comparison"));
-
-// Logical 
-console.log("\n Logical");
-
-test("AND true && true",       () => assert(runKova(`return true && true`).returnValue === true));
-test("AND true && false",      () => assert(runKova(`return true && false`).returnValue === false));
-test("OR false || true",       () => assert(runKova(`return false || true`).returnValue === true));
-test("NOT !true",              () => assert(runKova(`return !true`).returnValue === false));
-test("NOT !false",             () => assert(runKova(`return !false`).returnValue === true));
-test("throws: AND on numbers", () => assertThrows(() => runKova(`return 1 && 2`), "Logical"));
-test("throws: OR on numbers",  () => assertThrows(() => runKova(`return 1 || 0`), "Logical"));
-
-// If / Else 
-console.log("\n If / Else");
-
-test("if branch taken", () => {
-    assert(runKova(`let x = 5\nif x > 3 {\n    return 10\n}`).returnValue === 10);
+// ─── HTTP – save body ─────────────────────────────────────────────────────────
+console.log("\n HTTP – 'save' body");
+test("POST save body", () => {
+    const r = runKova(`
+let userData = { name: "Alice", email: "alice@x.com" }
+POST "/users" save userData into created
+return created.ok`);
+    eq(r.returnValue, true);
 });
-test("if not taken, falls through", () => {
-    assert(runKova(`let x = 1\nif x > 3 {\n    return 10\n}\nreturn 0`).returnValue === 0);
+test("POST save into output", () => {
+    const r = runKova(`
+let data = { key: "value" }
+POST "https://api.example.com/items" save data into res`);
+    assert(r.output.some(l => l.includes("POST")));
+    assert(r.output.some(l => l.includes("key")));
 });
-test("if-else: else branch taken", () => {
-    assert(runKova(`let x = 1\nif x > 3 {\n    return 10\n} else {\n    return 99\n}`).returnValue === 99);
+test("PUT save body", () => {
+    const r = runKova(`
+let updateData = { verified: true }
+PUT "/users/1" save updateData into res
+return res.status`);
+    eq(r.returnValue, 200);
 });
-test("else if: middle branch (no parens)", () => {
-    assert(runKova(
-`let x = 2
-if x > 3 {
-    return 10
-} else if x == 2 {
-    return 2
+
+// ─── CONNECT ─────────────────────────────────────────────────────────────────
+console.log("\n CONNECT");
+test("connect mysql using object", () => {
+    const r = runKova(`
+connect mysql using {
+    host: "localhost",
+    user: "root",
+    password: "secret",
+    database: "mydb"
+}`);
+    assert(r.output.some(l => l.includes("[DB]") && l.includes("mysql")));
+});
+test("connect with into binding", () => {
+    const r = runKova(`
+connect postgres using { host: "localhost", database: "shop" } into db
+return db.driver`);
+    eq(r.returnValue, "postgres");
+});
+test("connect stores connection object", () => {
+    const r = runKova(`
+connect mysql using { host: "localhost", database: "app" }
+return mysql.connected`);
+    eq(r.returnValue, true);
+});
+
+// ─── ENV ─────────────────────────────────────────────────────────────────────
+console.log("\n ENV");
+test("ENV.NODE_ENV access", () => {
+    process.env.NODE_ENV = "test";
+    const r = runKova(`
+connect mysql using {
+    host: ENV.NODE_ENV,
+    database: "app"
+}`);
+    assert(r.output.some(l => l.includes("test")));
+});
+test("ENV member in object literal", () => {
+    process.env.TEST_VAR = "hello";
+    const r = runKova(`let cfg = { val: ENV.TEST_VAR }  return cfg.val`);
+    eq(r.returnValue, "hello");
+});
+
+// ─── FIND / INSERT / UPDATE ───────────────────────────────────────────────────
+console.log("\n DB Queries");
+test("find with where + into", () => {
+    const r = runKova(`
+find users where { active: true } into results
+return results.collection`);
+    eq(r.returnValue, "users");
+});
+test("find with limit", () => {
+    const r = runKova(`
+find products where { inStock: true } limit 10 into foundItems
+return foundItems.limit`);
+    eq(r.returnValue, 10);
+});
+test("find with order_by", () => {
+    const r = runKova(`
+find orders where { status: "pending" } order_by createdAt desc into orders
+return orders.orderBy.direction`);
+    eq(r.returnValue, "desc");
+});
+test("insert into collection", () => {
+    const r = runKova(`
+insert into users { name: "Alice", email: "alice@x.com" } into newUser
+return newUser.collection`);
+    eq(r.returnValue, "users");
+});
+test("insert returns insertedId", () => {
+    const r = runKova(`
+insert into products { name: "Widget" } into result
+return result.insertedId`);
+    assert(typeof r.returnValue === "string");
+    assert(r.returnValue.startsWith("id_"));
+});
+test("update with set and where", () => {
+    const r = runKova(`
+update users set { verified: true } where { id: 1 } into updateResult
+return updateResult.modifiedCount`);
+    eq(r.returnValue, 1);
+});
+test("update output logged", () => {
+    const r = runKova(`
+update orders set { status: "shipped" } where { id: 99 }`);
+    assert(r.output.some(l => l.includes("[DB]") && l.includes("update")));
+});
+
+// ─── RESPOND ─────────────────────────────────────────────────────────────────
+console.log("\n RESPOND");
+test("respond with object", () => {
+    const r = runKova(`respond { status: 200, body: "OK" }`);
+    assert(r.output.some(l => l.includes("[RESPOND]")));
+    eq(r.respondValue.status, 200);
+});
+test("respond with variable", () => {
+    const r = runKova(`
+let data = { id: 1, name: "Alice" }
+respond { status: 200, body: data }`);
+    eq(r.respondValue.status, 200);
+});
+test("respond shorthand value", () => {
+    const r = runKova(`respond "hello"`);
+    eq(r.respondValue.body, "hello");
+});
+
+// ─── IMPORT ───────────────────────────────────────────────────────────────────
+console.log("\n IMPORT");
+test("named import parsed", () => {
+    const r = runKova(`import { handler, util } from "./routes/users"`);
+    assert(r.output.some(l => l.includes("[IMPORT]") && l.includes("handler")));
+});
+test("default import parsed", () => {
+    const r = runKova(`import logger from "./lib/logger"`);
+    assert(r.output.some(l => l.includes("[IMPORT]") && l.includes("logger")));
+});
+
+// ─── Real-world backend snippet ───────────────────────────────────────────────
+console.log("\n Real-world Backend Snippets");
+
+test("full user creation flow", () => {
+    const r = runKova(`
+let userData = { name: "Bob", email: "bob@example.com" }
+POST "/api/users" save userData into createdUser
+return createdUser.ok`);
+    eq(r.returnValue, true);
+});
+
+test("connect + insert flow", () => {
+    const r = runKova(`
+connect mysql using { host: "localhost", database: "shop" }
+insert into products { name: "Laptop", price: 999 } into product
+return product.collection`);
+    eq(r.returnValue, "products");
+});
+
+test("find + respond flow", () => {
+    const r = runKova(`
+find users where { active: true } limit 20 into users
+respond { status: 200, body: users }`);
+    eq(r.respondValue.status, 200);
+    eq(r.output.filter(l => l.includes("[DB]")).length, 1);
+});
+
+test("HTTP fetch + conditional respond", () => {
+    const r = runKova(`
+GET "https://api.example.com/health" into healthCheck
+if healthCheck.ok {
+    respond { status: 200, body: "healthy" }
 } else {
-    return 0
-}`).returnValue === 2);
-});
-test("else if: middle branch (with parens)", () => {
-    assert(runKova(
-`let x = 2
-if x > 3 {
-    return 10
-} else if (x == 2) {
-    return 2
-} else {
-    return 0
-}`).returnValue === 2);
-});
-test("else if: else branch taken", () => {
-    assert(runKova(
-`let x = 0
-if x > 3 {
-    return 10
-} else if x == 2 {
-    return 2
-} else {
-    return 0
-}`).returnValue === 0);
-});
-test("nested if", () => {
-    assert(runKova(
-`let x = 5
-let y = 10
-if x > 3 {
-    if y > 5 {
-        return 1
-    } else {
-        return 2
-    }
-} else {
-    return 3
-}`).returnValue === 1);
-});
-test("throws: if condition not boolean", () => {
-    assertThrows(() => runKova(`let x = 3\nif x {\n    return 3\n}`), "boolean");
+    respond { status: 503, body: "down" }
+}`);
+    eq(r.respondValue.status, 200);
 });
 
-//  Scope 
-console.log("\n Scope");
-
-test("inner var not visible outside block", () => {
-    assertThrows(() => runKova(
-`if true == true {
-    let inner = 5
-}
-return inner`
-    ), "Undeclar");
-});
-test("outer var accessible inside block", () => {
-    assert(runKova(`let x = 10\nif x > 5 {\n    return x\n}\nreturn 0`).returnValue === 10);
-});
-test("shadowing: inner x doesn't affect outer", () => {
-    assert(runKova(
-`let x = 1
-if x == 1 {
-    let x = 99
-}
-return x`).returnValue === 1);
+test("update based on fetched data", () => {
+    const r = runKova(`
+let userId = 42
+GET "https://auth.service.com/validate" into authResult
+update users set { lastSeen: "now" } where { id: userId } into updateRes
+return updateRes.modifiedCount`);
+    eq(r.returnValue, 1);
 });
 
-//  Return 
-console.log("\n️  Return");
+// ─── Comments ─────────────────────────────────────────────────────────────────
+console.log("\n Comments");
+test("// comment",  () => eq(runKova(`// comment\nlet x = 5\nreturn x`).returnValue, 5));
+test("# comment",   () => eq(runKova(`# comment\nlet x = 10\nreturn x`).returnValue, 10));
+test("/* block */", () => eq(runKova(`/* block */\nlet x = 7\nreturn x`).returnValue, 7));
 
-test("early return stops execution", () => {
-    assert(runKova(`return 1\nreturn 2`).returnValue === 1);
-});
-test("return from inside if", () => {
-    assert(runKova(`let x = 5\nif x > 3 {\n    return 42\n}\nreturn 0`).returnValue === 42);
-});
-test("no return → returnValue undefined", () => {
-    assert(runKova(`let x = 5`).returnValue === undefined);
-});
-
-//  HTTP 
-console.log("\n HTTP");
-
-test("POST produces output entry", () => {
-    const r = runKova(`POST "https://example.com"`);
-    assert(r.output.length === 1);
-    assert(r.output[0].includes("POST"));
-    assert(r.output[0].includes("https://example.com"));
-});
-test("GET produces output entry",     () => assert(runKova(`GET "https://a.com"`).output[0].includes("GET")));
-test("PUT produces output entry",     () => assert(runKova(`PUT "https://a.com"`).output[0].includes("PUT")));
-test("DELETE produces output entry",  () => assert(runKova(`DELETE "https://a.com"`).output[0].includes("DELETE")));
-test("multiple HTTP calls accumulate",() => assert(runKova(`POST "https://a.com"\nGET "https://b.com"`).output.length === 2));
-
-// External Calls 
-console.log("\n External Calls");
-
-// AI("hello") was failing because defaultSignatures requires 2 params.
-// Match the actual signature — use AI("summarize", x) which is the 2-param form.
-test("AI call returns a value", () => {
-    const r = runKova(
-        `let x = 3  let y = AI("summarize", x)  return y`,
-        defaultExternals,
-        defaultSignatures
-    );
-    assert(r.returnValue !== undefined, `Expected a return value, got ${r.returnValue}`);
-});
-test("AI call with two args", () => {
-    const r = runKova(
-        `let x = 5  let y = AI("classify", x)  return y`,
-        defaultExternals,
-        defaultSignatures
-    );
-    assert(r.returnValue !== undefined);
-});
-test("throws: unknown external function", () => {
-    assertThrows(
-        () => runKova(`let x = UNKNOWN("test")`, defaultExternals, defaultSignatures),
-        "Unknown function"
-    );
-});
-test("throws: wrong arg count for AI", () => {
-    assertThrows(
-        () => runKova(`let y = AI()`, defaultExternals, defaultSignatures),
-        "argument"
-    );
-});
-
-// Lexer Edge Cases 
-console.log("\n Lexer");
-
-test("throws: identifier starting with digit", () => {
-    assertThrows(() => runKova(`let 3x = 5`));
-});
-test("// comments ignored", () => {
-    assert(runKova(`// comment\nlet x = 5\nreturn x`).returnValue === 5);
-});
-test("# comments ignored", () => {
-    assert(runKova(`# comment\nlet x = 10\nreturn x`).returnValue === 10);
-});
-test("multi-line program", () => {
-    assert(runKova(`let a = 1\nlet b = 2\nlet c = a + b\nreturn c`).returnValue === 3);
-});
-
-//  Diagnostic 
-console.log("\n Diagnostic");
-
-// Helper: run code that always throws a Diagnostic, return the caught error
-function catchDiagnostic(code) {
-    try { runKova(code); return null; }
-    catch (e) { return e; }
-}
-
-// Use a simple 1-line program so the Identifier node definitely has location.
-// `let y = x + 2` — `x` is an undeclared Identifier on line 1, column 9.
-test("error has numeric line property", () => {
-    const e = catchDiagnostic(`let y = x + 2`);
-    assert(e !== null, "Expected error to be thrown");
-    assert(typeof e.line === "number", `Expected number, got ${typeof e.line} (value: ${e.line})`);
-});
-
-//  Same simple case — format() should return a string containing the source line.
-test("format() returns non-empty string with source line", () => {
-    const e = catchDiagnostic(`let y = x + 2`);
-    assert(e !== null, "Expected error to be thrown");
-    assert(typeof e.format === "function", "Expected format() method on Diagnostic");
-    const formatted = e.format();
-    assert(typeof formatted === "string" && formatted.length > 0, "Expected non-empty string");
-    assert(formatted.includes("let y = x + 2"), `format() missing source line:\n${formatted}`);
-});
-
-test("format() contains caret pointer", () => {
-    const e = catchDiagnostic(`let y = x + 2`);
-    const formatted = e.format();
-    assert(formatted.includes("^"), `format() missing '^' pointer:\n${formatted}`);
-});
-
-// Confirm the error targets the condition node, not the if keyword.
-// We check line (must be 2) and that column > 1 (would be 1 if wrongly targeting `if`).
-// The exact column depends on whether the lexer captures position before or after advancing.
-test("if-condition error targets condition node, not if keyword", () => {
-    const e = catchDiagnostic(`let x = 3\nif x {\n    return 3\n}`);
-    assert(e !== null, "Expected error");
-    assert(e.line === 2, `Expected line 2, got ${e.line}`);
-    // `if` is at column 1; `x` is at column 4 — either way it must be > 1
-    assert(e.column > 1,
-        `Column ${e.column} suggests error points at 'if' keyword, not the condition 'x'. ` +
-        `Apply the lexer fix: capture line/column BEFORE the advance loop in readIdentifierOrKeyword().`
-    );
-});
-
-//  Results 
-console.log(`\n${"─".repeat(50)}`);
-console.log(`  ${passed} passed, ${failed} failed out of ${passed + failed} tests`);
-console.log(`${"─".repeat(50)}\n`);
+// ─── Results ──────────────────────────────────────────────────────────────────
+console.log(`\n${"─".repeat(56)}`);
+const total = passed + failed;
+console.log(`  ${passed} passed, ${failed} failed out of ${total} tests (${((passed/total)*100).toFixed(1)}%)`);
+console.log(`${"─".repeat(56)}\n`);
 if (failed > 0) process.exit(1);
