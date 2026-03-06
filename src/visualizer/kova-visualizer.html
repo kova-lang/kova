@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">ExecutionGraph
+<title>Kova -- Execution Graph Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #080b10; --surface: #0d1117; --surface2: #161b22;
+  --border: #30363d; --text: #e6edf3; --muted: #8b949e; --dimmed: #484f58;
+  --blue: #388bfd; --orange: #f0883e; --green: #56d364; --teal: #7ee787;
+  --red: #f85149; --purple: #d2a8ff; --yellow: #ffa657; --cyan: #79c0ff;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+}
+body { font-family: var(--font-mono); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+header { display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 48px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.logo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text); }
+.logo-hex { width: 20px; height: 20px; background: linear-gradient(135deg, #388bfd, #d2a8ff); clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+.badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border); color: var(--muted); }
+.divider { width: 1px; height: 20px; background: var(--border); }
+.header-stats { margin-left: auto; display: flex; gap: 20px; font-size: 12px; color: var(--muted); font-family: var(--font-sans); }
+.header-stats span { display: flex; align-items: center; gap: 4px; }
+.header-stats b { color: var(--text); font-weight: 600; }
+.run-btn { padding: 5px 14px; background: #238636; border: 1px solid #2ea043; border-radius: 6px; color: #fff; font-family: var(--font-mono); font-size: 12px; font-weight: 600; cursor: pointer; }
+.run-btn:hover { background: #2ea043; }
+.layout { display: flex; flex: 1; overflow: hidden; }
+.editor-pane { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--surface); }
+.pane-label { font-size: 10px; color: var(--muted); padding: 10px 14px 6px; text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 1px solid var(--border); font-family: var(--font-sans); }
+textarea#editor { flex: 1; resize: none; border: none; outline: none; background: var(--surface); color: var(--text); font-family: var(--font-mono); font-size: 12px; padding: 12px 14px; line-height: 1.7; tab-size: 4; }
+.editor-footer { padding: 8px 14px; border-top: 1px solid var(--border); }
+.graph-pane { flex: 1; position: relative; overflow: hidden; background: radial-gradient(ellipse at 20% 20%, rgba(56,139,253,.04) 0%, transparent 60%), var(--bg); }
+svg { width: 100%; height: 100%; display: block; }
+.error-overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; }
+.error-overlay.visible { display: flex; }
+.error-box { background: var(--surface2); border: 1px solid var(--red); border-radius: 8px; padding: 16px 20px; max-width: 480px; color: var(--red); font-size: 12px; white-space: pre-wrap; line-height: 1.6; }
+.error-box b { display: block; margin-bottom: 6px; font-size: 13px; }
+.empty-state { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--dimmed); pointer-events: none; font-size: 13px; font-family: var(--font-sans); }
+.empty-state .big { font-size: 36px; }
+.legend { position: absolute; bottom: 16px; left: 16px; background: rgba(13,17,23,.88); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 11px; font-family: var(--font-sans); backdrop-filter: blur(4px); }
+.legend-title { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-family: var(--font-mono); }
+.legend-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; color: var(--muted); }
+.legend-line { width: 24px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.info-pane { width: 220px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; overflow-y: auto; }
+.info-section { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.info-section h3 { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-family: var(--font-sans); }
+.info-section p { font-size: 11px; color: var(--muted); line-height: 1.6; font-family: var(--font-sans); }
+.chip { display: inline-block; font-size: 9px; padding: 2px 6px; border-radius: 4px; margin: 2px 1px; font-weight: 600; font-family: var(--font-mono); }
+.node rect { cursor: pointer; }
+.node rect:hover { filter: brightness(1.25); }
+.node.selected rect { stroke-width: 2.5 !important; filter: brightness(1.3); }
+.node text { pointer-events: none; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.nodes .node { animation: fadeIn .2s ease both; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-hex"></div>Kova</div>
+  <span class="badge">v0.5</span>
+  <div class="divider"></div>
+  <span style="font-size:12px;color:var(--muted);font-family:var(--font-sans)">Execution Graph Visualizer</span>
+  <div class="header-stats">
+    <span><b id="stat-nodes">--</b> nodes</span>
+    <span><b id="stat-edges">--</b> edges</span>
+    <span><b id="stat-par">--</b> parallelizable</span>
+  </div>
+  <button class="run-btn" onclick="runGraph()">&#9654; Build Graph</button>
+</header>
+
+<div class="layout">
+  <div class="editor-pane">
+    <div class="pane-label">Kova Source</div>
+    <textarea id="editor" spellcheck="false">// Kova -- Backend user registration flow
+import { hashPassword } from "./lib/crypto"
+
+connect mysql using {
+    host: ENV.DB_HOST,
+    user: ENV.DB_USER,
+    password: ENV.DB_PASS,
+    database: ENV.DB_NAME
+}
+
+fn validateEmail(email) {
+    return email.includes("@")
+}
+
+fn registerUser(name, email, password) {
+    let isValid = validateEmail(email)
+
+    if isValid == true {
+        let hashed = hashPassword(password)
+
+        insert into users {
+            name: name,
+            email: email,
+            password: hashed
+        } into newUser
+
+        POST "/api/notifications" save {
+            type: "welcome",
+            userId: newUser.insertedId
+        } into notifResult
+
+        respond {
+            status: 201,
+            body: newUser
+        }
+    } else {
+        respond {
+            status: 400,
+            body: "Invalid email"
+        }
+    }
+}
+
+GET "https://auth.service.com/session" into session
+find users where { active: true } limit 50 into activeUsers</textarea>
+    <div class="editor-footer">
+      <button class="run-btn" style="width:100%" onclick="runGraph()">&#9654; Build Graph</button>
+    </div>
+  </div>
+
+  <div class="graph-pane">
+    <svg id="svg"></svg>
+    <div class="empty-state" id="empty-state">
+      <span class="big">&#11041;</span>
+      <span>Press <b>Build Graph</b> to visualize execution</span>
+    </div>
+    <div class="error-overlay" id="error-overlay">
+      <div class="error-box" id="error-box"></div>
+    </div>
+    <div class="legend">
+      <div class="legend-title">Edges</div>
+      <div class="legend-row"><div class="legend-line" style="background:#484f58"></div>sequential</div>
+      <div class="legend-row"><div class="legend-line" style="background:#388bfd"></div>data dependency</div>
+      <div class="legend-row"><div class="legend-line" style="background:#f85149"></div>control flow</div>
+      <div class="legend-row"><div class="legend-line" style="background:#ffa657"></div>function call</div>
+    </div>
+  </div>
+
+  <div class="info-pane">
+    <div class="info-section">
+      <h3>Inspector</h3>
+      <div id="inspector"><p>Click a node</p></div>
+    </div>
+    <div class="info-section">
+      <h3>Node Types</h3>
+      <div id="legend-chips"></div>
+    </div>
+    <div class="info-section">
+      <h3>Analysis</h3>
+      <div id="analysis-panel"><p>Run to analyse</p></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- Keywords -----------------------------------------------------------------
+
+var KEYWORDS = {
+    // -- Runtime --
+    let:      "LET",
+    fn:       "FN",
+    return:   "RETURN",
+    export:   "EXPORT",
+
+    // -- Imports --
+    import:   "IMPORT",
+    from:     "FROM",
+
+    // -- Control flow --
+    if:       "IF",
+    else:     "ELSE",
+    while:    "WHILE",
+    for:      "FOR",
+    in:       "IN",
+
+    // -- HTTP verbs --
+    GET:      "GET_HTTP",
+    POST:     "POST_HTTP",
+    PUT:      "PUT_HTTP",
+    DELETE:   "DELETE_HTTP",
+    PATCH:    "PATCH_HTTP",
+
+    // -- HTTP / query result binding --
+    into:     "INTO",
+    save:     "SAVE",
+
+    // -- Database --
+    connect:  "CONNECT",
+    using:    "USING",
+    find:     "FIND",
+    insert:   "INSERT",
+    update:   "UPDATE",
+    where:    "WHERE",
+    set:      "SET",
+    limit:    "LIMIT",
+    order_by: "ORDER_BY",
+    asc:      "ASC",
+    desc:     "DESC",
+
+    // -- Response --
+    respond:  "RESPOND",
+
+    // -- Environment --
+    ENV:      "ENV",
+
+    // -- Literals --
+    true:     "BOOLEAN",
+    false:    "BOOLEAN",
+    null:     "NULL",
+};
+
+// --- Single-character operators -----------------------------------------------
+
+var SINGLE_OPS = {
+    "+": "PLUS",
+    "-": "MINUS",
+    "*": "STAR",
+    "/": "SLASH",
+    "=": "ASSIGN",
+    ">": "GT",
+    "<": "LT",
+    "!": "BANG",
+    "%": "PERCENT",
+};
+
+// --- Multi-character operators ------------------------------------------------
+
+var MULTI_OPS = {
+    "==": "EQ",
+    "!=": "NEQ",
+    ">=": "GTE",
+    "<=": "LTE",
+    "&&": "AND",
+    "||": "OR",
+    "=>": "ARROW",
+    "+=": "PLUS_ASSIGN",
+    "-=": "MINUS_ASSIGN",
+    "*=": "STAR_ASSIGN",
+    "/=": "SLASH_ASSIGN",
+};
+
+// --- Punctuation / structural symbols ----------------------------------------
+
+var PSYMBOLS = {
+    "(": "LPAREN",
+    ")": "RPAREN",
+    "{": "LBRACE",
+    "}": "RBRACE",
+    "[": "LBRACKET",
+    "]": "RBRACKET",
+    ",": "COMMA",
+    ".": "DOT",
+    ":": "COLON",
+    ";": "SEMICOLON",
+};
+
+
+var LETTER_RGX = /[a-zA-Z_]/;
+var WHITESPACE_RGX = /\s/;
+var NUMBER_RGX = /[0-9]/;
+var OP_RGX = /[+\-*\/=<>!%&|]/;
+
+
+
+class Lexer {
+    constructor(code) {
+        this.code = code || "";
+        this.position = 0;
+        this.currentChar = this.code.length ? this.code[0] : null;
+        this.line = 1;
+        this.column = 1;
+    }
+
+    advance() {
+        if (this.currentChar === "\n") {
+            this.line++;
+            this.column = 1;
+        } else {
+            this.column++;
+        }
+        this.position++;
+        this.currentChar =
+            this.position < this.code.length ? this.code[this.position] : null;
+    }
+
+    peek(offset = 1) {
+        const pos = this.position + offset;
+        return pos < this.code.length ? this.code[pos] : null;
+    }
+
+    skipIgnorable() {
+        while (this.currentChar !== null) {
+            if ([" ", "\t", "\r", "\n"].includes(this.currentChar)) {
+                this.advance();
+                continue;
+            }
+            // # comment
+            if (this.currentChar === "#") {
+                while (this.currentChar !== "\n" && this.currentChar !== null)
+                    this.advance();
+                continue;
+            }
+            // // comment
+            if (this.currentChar === "/" && this.peek() === "/") {
+                this.advance();
+                this.advance();
+                while (this.currentChar !== "\n" && this.currentChar !== null)
+                    this.advance();
+                continue;
+            }
+            // /* block comment */
+            if (this.currentChar === "/" && this.peek() === "*") {
+                this.advance();
+                this.advance();
+                while (
+                    this.currentChar !== null &&
+                    !(this.currentChar === "*" && this.peek() === "/")
+                ) {
+                    this.advance();
+                }
+                if (this.currentChar !== null) {
+                    this.advance(); // *
+                    this.advance(); // /
+                }
+                continue;
+            }
+            break;
+        }
+    }
+
+    readNumber() {
+        let number = "";
+        let isFloat = false;
+        const line = this.line;
+        const column = this.column;
+
+        while (this.currentChar && NUMBER_RGX.test(this.currentChar)) {
+            number += this.currentChar;
+            this.advance();
+        }
+
+        // float support: 3.14
+        if (this.currentChar === "." && this.peek() && NUMBER_RGX.test(this.peek())) {
+            isFloat = true;
+            number += this.currentChar;
+            this.advance();
+            while (this.currentChar && NUMBER_RGX.test(this.currentChar)) {
+                number += this.currentChar;
+                this.advance();
+            }
+        }
+
+        if (this.currentChar && LETTER_RGX.test(this.currentChar)) {
+            throw new Error(
+                `Invalid identifier: identifiers cannot start with a number (${number}${this.currentChar}...)`
+            );
+        }
+
+        return { type: "NUMBER", value: Number(number), float: isFloat, line, column };
+    }
+
+    readString(quote = '"') {
+        let string = "";
+        const line = this.line;
+        const column = this.column;
+        this.advance(); // opening quote
+
+        while (this.currentChar && this.currentChar !== quote) {
+            // escape sequences
+            if (this.currentChar === "\\") {
+                this.advance();
+                const escapes = { n: "\n", t: "\t", r: "\r", "\\": "\\", '"': '"', "'": "'" };
+                string += escapes[this.currentChar] ?? this.currentChar;
+            } else {
+                string += this.currentChar;
+            }
+            this.advance();
+        }
+
+        if (this.currentChar !== quote) {
+            throw new Error(`Unterminated string literal starting at line ${line}`);
+        }
+        this.advance(); // closing quote
+        return { type: "STRING", value: string, line, column };
+    }
+
+    readIdentifierOrKeyword() {
+        let text = "";
+        const line = this.line;
+        const column = this.column;
+
+        while (
+            this.currentChar &&
+            (LETTER_RGX.test(this.currentChar) || NUMBER_RGX.test(this.currentChar))
+        ) {
+            text += this.currentChar;
+            this.advance();
+        }
+
+        if (text === "true" || text === "false") {
+            return { type: "BOOLEAN", value: text === "true", line, column };
+        }
+        if (text === "null") {
+            return { type: "NULL", value: null, line, column };
+        }
+        if (Object.prototype.hasOwnProperty.call(KEYWORDS, text)) {
+            return { type: KEYWORDS[text], value: text, line, column };
+        }
+        return { type: "IDENTIFIER", value: text, line, column };
+    }
+
+    readOperator() {
+        const twoCharOp = this.currentChar + this.peek();
+        if (MULTI_OPS[twoCharOp]) {
+            const line = this.line;
+            const column = this.column;
+            this.advance();
+            this.advance();
+            return { type: MULTI_OPS[twoCharOp], value: twoCharOp, line, column };
+        }
+        if (SINGLE_OPS[this.currentChar]) {
+            const line = this.line;
+            const column = this.column;
+            const value = this.currentChar;
+            this.advance();
+            return { type: SINGLE_OPS[value], value, line, column };
+        }
+        return null;
+    }
+
+    readProgramSymbols() {
+        if (this.currentChar && PSYMBOLS[this.currentChar]) {
+            const line = this.line;
+            const column = this.column;
+            const value = this.currentChar;
+            this.advance();
+            return { type: PSYMBOLS[value], value, line, column };
+        }
+        return null;
+    }
+
+    tokenize() {
+        const tokens = [];
+
+        while (this.currentChar !== null) {
+            this.skipIgnorable();
+            if (this.currentChar === null) break;
+
+            if (NUMBER_RGX.test(this.currentChar)) {
+                tokens.push(this.readNumber());
+                continue;
+            }
+            if (this.currentChar === '"' || this.currentChar === "'") {
+                tokens.push(this.readString(this.currentChar));
+                continue;
+            }
+            if (LETTER_RGX.test(this.currentChar)) {
+                tokens.push(this.readIdentifierOrKeyword());
+                continue;
+            }
+            if (OP_RGX.test(this.currentChar)) {
+                const op = this.readOperator();
+                if (!op) throw new Error(`Unexpected operator: ${this.currentChar}`);
+                tokens.push(op);
+                continue;
+            }
+            if (PSYMBOLS[this.currentChar]) {
+                tokens.push(this.readProgramSymbols());
+                continue;
+            }
+
+            throw new Error(
+                `Unexpected character '${this.currentChar}' at line ${this.line}, column ${this.column}`
+            );
+        }
+
+        tokens.push({ type: "EOF", value: null });
+        return tokens;
+    }
+}
+
+
+class Parser {
+    constructor() {
+        this.tokens = [];
+        this.currentPos = 0;
+        this.currentToken = null;
+    }
+
+    advance() {
+        this.currentPos++;
+        this.currentToken =
+            this.currentPos < this.tokens.length
+                ? this.tokens[this.currentPos]
+                : { type: "EOF" };
+        return this.currentToken;
+    }
+
+    peek(offset = 1) {
+        const pos = this.currentPos + offset;
+        return pos < this.tokens.length ? this.tokens[pos] : { type: "EOF" };
+    }
+
+    expect(type) {
+        if (!this.currentToken || this.currentToken.type !== type) {
+            const loc = this.currentToken?.line != null
+                ? ` at line ${this.currentToken.line}, col ${this.currentToken.column}`
+                : "";
+            throw new Error(
+                `Expected ${type} but got ${this.currentToken?.type ?? "null"}${loc}`
+            );
+        }
+        const tok = this.currentToken;
+        this.advance();
+        return tok;
+    }
+
+    parseProgram(tokens) {
+        this.tokens = tokens;
+        this.currentPos = 0;
+        this.currentToken = this.tokens[0] ?? { type: "EOF" };
+        const body = [];
+        while (this.currentToken.type !== "EOF") {
+            body.push(this.parseStatement());
+        }
+        return { type: "Program", body };
+    }
+
+    // --- Statements ----------------------------------------------------------
+
+    parseStatement() {
+        while (this.currentToken.type === "SEMICOLON") this.advance();
+
+        switch (this.currentToken.type) {
+            case "LET":        return this.parseVariableDeclaration();
+            case "FN":         return this.parseFunctionDeclaration();
+            case "IF":         return this.parseIfStatement();
+            case "WHILE":      return this.parseWhileStatement();
+            case "FOR":        return this.parseForStatement();
+            case "RETURN":     return this.parseReturnStatement();
+            case "RESPOND":    return this.parseRespondStatement();
+            case "IMPORT":     return this.parseImportStatement();
+            case "EXPORT":     return this.parseExportStatement();
+            case "CONNECT":    return this.parseConnectStatement();
+            case "FIND":       return this.parseFindStatement();
+            case "INSERT":     return this.parseInsertStatement();
+            case "UPDATE":     return this.parseUpdateStatement();
+            case "POST_HTTP":
+            case "GET_HTTP":
+            case "PUT_HTTP":
+            case "PATCH_HTTP":
+            case "DELETE_HTTP": return this.parseHttpStatement();
+            case "LBRACE":     return this.parseBlock();
+            default:           return this.parseExpressionStatement();
+        }
+    }
+
+    // --- Variable / Function declarations ------------------------------------
+
+    parseVariableDeclaration() {
+        const letToken = this.currentToken;
+        this.expect("LET");
+
+        const id = this.currentToken;
+        this.expect("IDENTIFIER");
+
+        // optional type annotation:  let x: number = 5
+        let typeAnnotation = null;
+        if (this.currentToken.type === "COLON") {
+            this.advance();
+            typeAnnotation = this.currentToken.value;
+            this.advance();
+        }
+
+        this.expect("ASSIGN");
+        const init = this.parseExpression();
+
+        return {
+            type: "VariableDeclaration",
+            id: { type: "Identifier", name: id.value, line: id.line, column: id.column },
+            typeAnnotation,
+            init,
+            line: letToken.line,
+            column: letToken.column,
+        };
+    }
+
+    parseFunctionDeclaration() {
+        const fnToken = this.currentToken;
+        this.expect("FN");
+
+        const name = this.currentToken;
+        this.expect("IDENTIFIER");
+        this.expect("LPAREN");
+
+        const params = [];
+        if (this.currentToken.type !== "RPAREN") {
+            params.push(this.parseParam());
+            while (this.currentToken.type === "COMMA") {
+                this.advance();
+                params.push(this.parseParam());
+            }
+        }
+        this.expect("RPAREN");
+
+        // optional return type:  fn greet(name: string): string { ... }
+        let returnType = null;
+        if (this.currentToken.type === "COLON") {
+            this.advance();
+            returnType = this.currentToken.value;
+            this.advance();
+        }
+
+        const body = this.parseBlock();
+
+        return {
+            type: "FunctionDeclaration",
+            name: { type: "Identifier", name: name.value, line: name.line, column: name.column },
+            params,
+            returnType,
+            body,
+            line: fnToken.line,
+            column: fnToken.column,
+        };
+    }
+
+    parseParam() {
+        const name = this.currentToken;
+        this.expect("IDENTIFIER");
+        let typeAnnotation = null;
+        if (this.currentToken.type === "COLON") {
+            this.advance();
+            typeAnnotation = this.currentToken.value;
+            this.advance();
+        }
+        return {
+            type: "Param",
+            name: name.value,
+            typeAnnotation,
+            line: name.line,
+            column: name.column,
+        };
+    }
+
+    // --- Control flow ---------------------------------------------------------
+
+    parseIfStatement() {
+        const ifToken = this.currentToken;
+        this.expect("IF");
+        const test = this.parseExpression();
+        const consequent = this.parseBlock();
+        let alternate = null;
+        if (this.currentToken.type === "ELSE") {
+            this.advance();
+            alternate = this.currentToken.type === "IF"
+                ? this.parseIfStatement()
+                : this.parseBlock();
+        }
+        return { type: "IfStatement", test, consequent, alternate, line: ifToken.line, column: ifToken.column };
+    }
+
+    parseWhileStatement() {
+        const tok = this.currentToken;
+        this.expect("WHILE");
+        const test = this.parseExpression();
+        const body = this.parseBlock();
+        return { type: "WhileStatement", test, body, line: tok.line, column: tok.column };
+    }
+
+    parseForStatement() {
+        const tok = this.currentToken;
+        this.expect("FOR");
+        const id = this.currentToken;
+        this.expect("IDENTIFIER");
+        this.expect("IN");
+        const iterable = this.parseExpression();
+        const body = this.parseBlock();
+        return {
+            type: "ForStatement",
+            id: { type: "Identifier", name: id.value, line: id.line, column: id.column },
+            iterable,
+            body,
+            line: tok.line,
+            column: tok.column,
+        };
+    }
+
+    // --- HTTP statements ------------------------------------------------------
+    //
+    //  GET  "url"                          -> plain request, result discarded
+    //  GET  "url"  into result             -> bind response to let 'result'
+    //  POST "url"  save body               -> send body, discard response
+    //  POST "url"  save body  into result  -> send body, bind response
+    //  PUT  "url"  save body  into result
+    //  DELETE "url"
+    //  PATCH "url" save body
+    //  Any HTTP verb can also have:  headers { key: val }
+
+    parseHttpStatement() {
+        const verb = this.currentToken;
+        this.advance();
+
+        // URL  string literal or expression
+        const url = this.parseSimpleExpression();
+
+        // optional body:  save <expr>
+        let body = null;
+        if (this.currentToken.type === "SAVE") {
+            this.advance();
+            body = this.parseSimpleExpression();
+        }
+
+        // optional headers:  headers { ... }
+        let headers = null;
+        if (this.currentToken.type === "IDENTIFIER" && this.currentToken.value === "headers") {
+            this.advance();
+            headers = this.parseObjectExpression();
+        }
+
+        // optional result binding:  into <identifier>
+        let binding = null;
+        if (this.currentToken.type === "INTO") {
+            this.advance();
+            binding = this.currentToken;
+            this.expect("IDENTIFIER");
+        }
+
+        return {
+            type: "HttpStatement",
+            method: verb.value,
+            url,
+            body,
+            headers,
+            binding: binding ? { type: "Identifier", name: binding.value, line: binding.line, column: binding.column } : null,
+            line: verb.line,
+            column: verb.column,
+        };
+    }
+
+    // --- respond statement ----------------------------------------------------
+    //
+    //  respond { status: 200, body: data }
+    //  respond data                         -> shorthand, body only
+
+    parseRespondStatement() {
+        const tok = this.currentToken;
+        this.expect("RESPOND");
+        const value = this.parseExpression();
+        return { type: "RespondStatement", value, line: tok.line, column: tok.column };
+    }
+
+    // --- CONNECT statement ----------------------------------------------------
+    //
+    //  connect mysql using {
+    //      host: ENV.DB_HOST,
+    //      user: ENV.DB_USER,
+    //      password: ENV.DB_PASS,
+    //      database: ENV.DB_NAME
+    //  }
+    //  The result is automatically stored in the named connection variable.
+
+    parseConnectStatement() {
+        const tok = this.currentToken;
+        this.expect("CONNECT");
+
+        // driver name: mysql | postgres | mongo | sqlite | redis ...
+        const driver = this.currentToken;
+        this.expect("IDENTIFIER");
+
+        this.expect("USING");
+        const config = this.parseObjectExpression();
+
+        // optional:  into myConn
+        let binding = null;
+        if (this.currentToken.type === "INTO") {
+            this.advance();
+            binding = this.currentToken;
+            this.expect("IDENTIFIER");
+        }
+
+        return {
+            type: "ConnectStatement",
+            driver: driver.value,
+            config,
+            binding: binding
+                ? { type: "Identifier", name: binding.value, line: binding.line, column: binding.column }
+                : null,
+            line: tok.line,
+            column: tok.column,
+        };
+    }
+
+    // --- DB query statements --------------------------------------------------
+    //
+    //  find users where { active: true } limit 10 order_by createdAt desc  into results
+    //  insert into users { name: "Alice", email: "alice@x.com" }           into newDoc
+    //  update users set { verified: true } where { id: userId }
+    //  delete from users where { id: userId }   (uses DB_DELETE token, not HTTP DELETE)
+
+    parseFindStatement() {
+        const tok = this.currentToken;
+        this.expect("FIND");
+
+        const collection = this.currentToken;
+        this.expect("IDENTIFIER");
+
+        // optional  where { ... }
+        let filter = null;
+        if (this.currentToken.type === "WHERE") {
+            this.advance();
+            filter = this.parseObjectExpression();
+        }
+
+        // optional  limit <number | identifier>
+        let limitVal = null;
+        if (this.currentToken.type === "LIMIT") {
+            this.advance();
+            limitVal = this.parseSimpleExpression();
+        }
+
+        // optional  order_by <field> asc|desc
+        let orderBy = null;
+        if (this.currentToken.type === "ORDER_BY") {
+            this.advance();
+            const field = this.currentToken;
+            this.expect("IDENTIFIER");
+            const dir = (this.currentToken.type === "ASC" || this.currentToken.type === "DESC")
+                ? this.currentToken.value
+                : "asc";
+            if (this.currentToken.type === "ASC" || this.currentToken.type === "DESC") this.advance();
+            orderBy = { field: field.value, direction: dir };
+        }
+
+        // optional  into <identifier>
+        let binding = null;
+        if (this.currentToken.type === "INTO") {
+            this.advance();
+            binding = this.currentToken;
+            this.expect("IDENTIFIER");
+        }
+
+        return {
+            type: "FindStatement",
+            collection: collection.value,
+            filter,
+            limit: limitVal,
+            orderBy,
+            binding: binding
+                ? { type: "Identifier", name: binding.value, line: binding.line, column: binding.column }
+                : null,
+            line: tok.line,
+            column: tok.column,
+        };
+    }
+
+    parseInsertStatement() {
+        const tok = this.currentToken;
+        this.expect("INSERT");
+        this.expect("INTO");
+
+        const collection = this.currentToken;
+        this.expect("IDENTIFIER");
+
+        const document = this.parseObjectExpression();
+
+        // optional  into <identifier>   (to capture inserted document / id)
+        let binding = null;
+        if (this.currentToken.type === "INTO") {
+            this.advance();
+            binding = this.currentToken;
+            this.expect("IDENTIFIER");
+        }
+
+        return {
+            type: "InsertStatement",
+            collection: collection.value,
+            document,
+            binding: binding
+                ? { type: "Identifier", name: binding.value, line: binding.line, column: binding.column }
+                : null,
+            line: tok.line,
+            column: tok.column,
+        };
+    }
+
+    parseUpdateStatement() {
+        const tok = this.currentToken;
+        this.expect("UPDATE");
+
+        const collection = this.currentToken;
+        this.expect("IDENTIFIER");
+
+        this.expect("SET");
+        const updates = this.parseObjectExpression();
+
+        let filter = null;
+        if (this.currentToken.type === "WHERE") {
+            this.advance();
+            filter = this.parseObjectExpression();
+        }
+
+        let binding = null;
+        if (this.currentToken.type === "INTO") {
+            this.advance();
+            binding = this.currentToken;
+            this.expect("IDENTIFIER");
+        }
+
+        return {
+            type: "UpdateStatement",
+            collection: collection.value,
+            updates,
+            filter,
+            binding: binding
+                ? { type: "Identifier", name: binding.value, line: binding.line, column: binding.column }
+                : null,
+            line: tok.line,
+            column: tok.column,
+        };
+    }
+
+    // --- Import / Export ------------------------------------------------------
+    //
+    //  import { handler, util } from "./routes/users"
+    //  import logger from "./lib/logger"    (default import)
+
+    parseImportStatement() {
+        const tok = this.currentToken;
+        this.expect("IMPORT");
+
+        const specifiers = [];
+        let defaultImport = null;
+
+        if (this.currentToken.type === "LBRACE") {
+            // named imports: { a, b }
+            this.advance();
+            while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
+                const spec = this.currentToken;
+                this.expect("IDENTIFIER");
+                specifiers.push(spec.value);
+                if (this.currentToken.type === "COMMA") this.advance();
+            }
+            this.expect("RBRACE");
+        } else if (this.currentToken.type === "IDENTIFIER") {
+            // default import:  import logger from "..."
+            defaultImport = this.currentToken.value;
+            this.advance();
+        }
+
+        this.expect("FROM");
+        const source = this.currentToken;
+        this.expect("STRING");
+
+        return {
+            type: "ImportStatement",
+            specifiers,
+            defaultImport,
+            source: source.value,
+            line: tok.line,
+            column: tok.column,
+        };
+    }
+
+    parseExportStatement() {
+        const tok = this.currentToken;
+        this.expect("EXPORT");
+        const declaration = this.parseStatement();
+        return { type: "ExportStatement", declaration, line: tok.line, column: tok.column };
+    }
+
+    // --- Return / Respond -----------------------------------------------------
+
+    parseReturnStatement() {
+        const tok = this.currentToken;
+        this.expect("RETURN");
+        const argument = this.parseExpression();
+        return { type: "ReturnStatement", argument, line: tok.line, column: tok.column };
+    }
+
+    parseExpressionStatement() {
+        const tok = this.currentToken;
+        const expression = this.parseExpression();
+        return { type: "ExpressionStatement", expression, line: tok.line, column: tok.column };
+    }
+
+    // --- Block ----------------------------------------------------------------
+
+    parseBlock() {
+        const brace = this.currentToken;
+        this.expect("LBRACE");
+        const body = [];
+        while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
+            body.push(this.parseStatement());
+        }
+        this.expect("RBRACE");
+        return { type: "BlockStatement", body, line: brace.line, column: brace.column };
+    }
+
+    // --- Expression precedence chain -----------------------------------------
+
+    parseExpression() {
+        // HTTP verbs used as expressions: let res = GET "url"
+        const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
+        if (HTTP.includes(this.currentToken.type)) {
+            return this.parseHttpExpression();
+        }
+        return this.parseAssignment();
+    }
+
+    // A "simple expression" is one that won't consume HTTP/into/save keywords
+    // that belong to the enclosing statement. Used for URLs and body values.
+    parseSimpleExpression() {
+        return this.parseLogicalOr();
+    }
+
+    parseAssignment() {
+        const left = this.parseLogicalOr();
+
+        const assignOps = ["ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN", "SLASH_ASSIGN"];
+        if (assignOps.includes(this.currentToken.type)) {
+            const op = this.currentToken;
+            this.advance();
+
+            const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
+            const right = HTTP.includes(this.currentToken.type)
+                ? this.parseHttpExpression()
+                : this.parseAssignment();
+
+            if (left.type !== "Identifier" && left.type !== "MemberExpression") {
+                throw new Error("Invalid assignment target");
+            }
+
+            return {
+                type: "AssignmentExpression",
+                operator: op.value,
+                left,
+                right,
+                line: op.line,
+                column: op.column,
+            };
+        }
+
+        return left;
+    }
+
+    // HTTP used as an expression value (right-hand side of assignment)
+    parseHttpExpression() {
+        const verb = this.currentToken;
+        this.advance();
+
+        const url = this.parseSimpleExpression();
+
+        let body = null;
+        if (this.currentToken.type === "SAVE") {
+            this.advance();
+            body = this.parseSimpleExpression();
+        }
+
+        let headers = null;
+        if (this.currentToken.type === "IDENTIFIER" && this.currentToken.value === "headers") {
+            this.advance();
+            headers = this.parseObjectExpression();
+        }
+
+        return {
+            type: "HttpExpression",
+            method: verb.value,
+            url,
+            body,
+            headers,
+            line: verb.line,
+            column: verb.column,
+        };
+    }
+
+    parseLogicalOr() {
+        let left = this.parseLogicalAnd();
+        while (this.currentToken.type === "OR") {
+            const op = this.currentToken; this.advance();
+            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseLogicalAnd(), line: op.line, column: op.column };
+        }
+        return left;
+    }
+
+    parseLogicalAnd() {
+        let left = this.parseEquality();
+        while (this.currentToken.type === "AND") {
+            const op = this.currentToken; this.advance();
+            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseEquality(), line: op.line, column: op.column };
+        }
+        return left;
+    }
+
+    parseEquality() {
+        let left = this.parseComparison();
+        while (this.currentToken.type === "EQ" || this.currentToken.type === "NEQ") {
+            const op = this.currentToken; this.advance();
+            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseComparison(), line: op.line, column: op.column };
+        }
+        return left;
+    }
+
+    parseComparison() {
+        let left = this.parseTerm();
+        while (["GT", "LT", "GTE", "LTE"].includes(this.currentToken.type)) {
+            const op = this.currentToken; this.advance();
+            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseTerm(), line: op.line, column: op.column };
+        }
+        return left;
+    }
+
+    parseTerm() {
+        let left = this.parseFactor();
+        while (this.currentToken.type === "PLUS" || this.currentToken.type === "MINUS") {
+            const op = this.currentToken; this.advance();
+            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseFactor(), line: op.line, column: op.column };
+        }
+        return left;
+    }
+
+    parseFactor() {
+        let left = this.parseUnary();
+        while (["STAR", "SLASH", "PERCENT"].includes(this.currentToken.type)) {
+            const op = this.currentToken; this.advance();
+            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseUnary(), line: op.line, column: op.column };
+        }
+        return left;
+    }
+
+    parseUnary() {
+        if (this.currentToken.type === "BANG" || this.currentToken.type === "MINUS") {
+            const op = this.currentToken; this.advance();
+            return { type: "UnaryExpression", operator: op.value, argument: this.parseUnary(), line: op.line, column: op.column };
+        }
+        return this.parsePostfix();
+    }
+
+    parsePostfix() {
+        let node = this.parsePrimary();
+
+        while (true) {
+            if (this.currentToken.type === "LPAREN") {
+                node = this.finishCallExpression(node);
+            } else if (this.currentToken.type === "DOT") {
+                const dot = this.currentToken; this.advance();
+                const prop = this.currentToken;
+                // allow contextual keywords as property names after dot
+                if (prop.type !== "IDENTIFIER" && prop.value != null) {
+                    this.advance(); // consume the keyword-as-property
+                } else {
+                    this.expect("IDENTIFIER");
+                }
+                node = { type: "MemberExpression", object: node, property: prop.value, computed: false, line: dot.line, column: dot.column };
+            } else if (this.currentToken.type === "LBRACKET") {
+                const bracket = this.currentToken; this.advance();
+                const index = this.parseExpression();
+                this.expect("RBRACKET");
+                node = { type: "MemberExpression", object: node, property: index, computed: true, line: bracket.line, column: bracket.column };
+            } else {
+                break;
+            }
+        }
+
+        return node;
+    }
+
+    parsePrimary() {
+        const token = this.currentToken;
+
+        if (token.type === "NUMBER")  { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
+        if (token.type === "STRING")  { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
+        if (token.type === "BOOLEAN") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
+        if (token.type === "NULL")    { this.advance(); return { type: "Literal", value: null,        line: token.line, column: token.column }; }
+
+        // ENV  ->  treated as a special identifier that resolves to process.env
+        if (token.type === "ENV") {
+            this.advance();
+            return { type: "EnvExpression", line: token.line, column: token.column };
+        }
+
+        if (token.type === "IDENTIFIER") {
+            this.advance();
+            return { type: "Identifier", name: token.value, line: token.line, column: token.column };
+        }
+
+        // Contextual keywords: when used as a value (not at statement position),
+        // keywords like `update`, `limit`, `set`, `find`, `insert`, `where`, `respond`
+        // are valid variable names. Treat them as identifiers here.
+        const CONTEXTUAL_KW_TYPES = new Set([
+            "UPDATE","FIND","INSERT","SET","LIMIT","WHERE","ORDER_BY",
+            "ASC","DESC","RESPOND","CONNECT","USING","SAVE","INTO","FROM"
+        ]);
+        if (CONTEXTUAL_KW_TYPES.has(token.type)) {
+            this.advance();
+            return { type: "Identifier", name: token.value, line: token.line, column: token.column };
+        }
+        if (token.type === "LBRACKET") return this.parseArrayExpression();
+        if (token.type === "LBRACE")   return this.parseObjectExpression();
+
+        if (token.type === "LPAREN") {
+            if (this.isArrowFunction()) return this.parseArrowFunction();
+            this.advance();
+            const expr = this.parseExpression();
+            this.expect("RPAREN");
+            return expr;
+        }
+
+        throw new Error(
+            `Unexpected token: ${token.type}${token.line != null ? ` at line ${token.line}` : ""}`
+        );
+    }
+
+    parseArrayExpression() {
+        const bracket = this.currentToken;
+        this.expect("LBRACKET");
+        const elements = [];
+        while (this.currentToken.type !== "RBRACKET" && this.currentToken.type !== "EOF") {
+            elements.push(this.parseExpression());
+            if (this.currentToken.type === "COMMA") this.advance();
+        }
+        this.expect("RBRACKET");
+        return { type: "ArrayExpression", elements, line: bracket.line, column: bracket.column };
+    }
+
+    parseObjectExpression() {
+        const brace = this.currentToken;
+        this.expect("LBRACE");
+        const properties = [];
+        while (this.currentToken.type !== "RBRACE" && this.currentToken.type !== "EOF") {
+            const key = this.currentToken;
+            // keys can be identifiers or strings
+            if (key.type !== "IDENTIFIER" && key.type !== "STRING") {
+                throw new Error(`Expected object key, got ${key.type} at line ${key.line}`);
+            }
+            this.advance();
+            this.expect("COLON");
+            const value = this.parseExpression();
+            properties.push({ key: key.value, value });
+            if (this.currentToken.type === "COMMA") this.advance();
+        }
+        this.expect("RBRACE");
+        return { type: "ObjectExpression", properties, line: brace.line, column: brace.column };
+    }
+
+    isArrowFunction() {
+        let depth = 0, i = this.currentPos;
+        while (i < this.tokens.length) {
+            if (this.tokens[i].type === "LPAREN") depth++;
+            else if (this.tokens[i].type === "RPAREN") {
+                depth--;
+                if (depth === 0) return i + 1 < this.tokens.length && this.tokens[i + 1].type === "ARROW";
+            }
+            i++;
+        }
+        return false;
+    }
+
+    parseArrowFunction() {
+        const paren = this.currentToken;
+        this.expect("LPAREN");
+        const params = [];
+        if (this.currentToken.type !== "RPAREN") {
+            params.push(this.parseParam());
+            while (this.currentToken.type === "COMMA") { this.advance(); params.push(this.parseParam()); }
+        }
+        this.expect("RPAREN");
+        this.expect("ARROW");
+        const body = this.currentToken.type === "LBRACE" ? this.parseBlock() : this.parseExpression();
+        return { type: "ArrowFunction", params, body, line: paren.line, column: paren.column };
+    }
+
+    finishCallExpression(callee) {
+        const paren = this.currentToken;
+        this.expect("LPAREN");
+        const args = [];
+        if (this.currentToken.type !== "RPAREN") {
+            args.push(this.parseExpression());
+            while (this.currentToken.type === "COMMA") { this.advance(); args.push(this.parseExpression()); }
+        }
+        this.expect("RPAREN");
+        return { type: "CallExpression", callee, arguments: args, line: paren.line, column: paren.column };
+    }
+}
+
+
+/**
+ * ExecutionGraph
+ *
+ * Converts a Kova AST into an explicit directed graph where:
+ *   - Every meaningful statement/expression is a NODE
+ *   - Every data dependency or control dependency is an EDGE
+ *
+ * Node kinds:
+ *   entry        -- program start
+ *   exit         -- program end
+ *   declare      -- variable declaration  (let x = ...)
+ *   assign       -- variable reassignment
+ *   http         -- HTTP call             (GET / POST / PUT / DELETE / PATCH)
+ *   db_connect   -- database connection   (connect ... using ...)
+ *   db_find      -- DB read query         (find ... where ...)
+ *   db_insert    -- DB write              (insert into ...)
+ *   db_update    -- DB mutation           (update ... set ...)
+ *   respond      -- respond statement
+ *   call         -- function call
+ *   fn_def       -- function declaration
+ *   if           -- conditional branch
+ *   while        -- while loop
+ *   for          -- for..in loop
+ *   return       -- return statement
+ *   import       -- import statement
+ *   expr         -- generic expression
+ *
+ * Edge kinds:
+ *   seq          -- sequential execution (A then B)
+ *   data         -- data dependency (B reads a value produced by A)
+ *   control      -- control dependency (B runs only if A's condition is true/false)
+ *   call         -- function invocation edge
+ *   binding      -- result binding (into <var>)
+ */
+
+class ExecutionGraph {
+    constructor() {
+        this.nodes = new Map();   // id -> GraphNode
+        this.edges = [];          // GraphEdge[]
+        this._counter = 0;
+        this._varProducers = new Map(); // varName -> nodeId (last writer)
+        this._fnNodes = new Map();      // fnName -> nodeId
+    }
+
+    // --- Node / Edge factories ------------------------------------------------
+
+    _id() { return `n${++this._counter}`; }
+
+    addNode(kind, label, meta = {}) {
+        const id = this._id();
+        const node = { id, kind, label, meta, line: meta.line ?? null };
+        this.nodes.set(id, node);
+        return id;
+    }
+
+    addEdge(from, to, kind = "seq", label = "") {
+        if (from && to && from !== to) {
+            this.edges.push({ from, to, kind, label });
+        }
+    }
+
+    // --- Variable tracking ----------------------------------------------------
+
+    _setProducer(name, nodeId) { this._varProducers.set(name, nodeId); }
+
+    _getProducer(name) { return this._varProducers.get(name) ?? null; }
+
+    // Collect all identifier names referenced in an AST node (shallow)
+    _refsIn(node) {
+        const names = new Set();
+        const walk = (n) => {
+            if (!n || typeof n !== "object") return;
+            if (n.type === "Identifier") names.add(n.name);
+            if (n.type === "MemberExpression") walk(n.object);
+            if (n.left)      walk(n.left);
+            if (n.right)     walk(n.right);
+            if (n.argument)  walk(n.argument);
+            if (n.init)      walk(n.init);
+            if (n.test)      walk(n.test);
+            if (n.url)       walk(n.url);
+            if (n.body && Array.isArray(n.body)) n.body.forEach(walk);
+            if (n.arguments) n.arguments.forEach(walk);
+            if (n.elements)  n.elements.forEach(walk);
+            if (n.properties) n.properties.forEach(p => walk(p.value));
+        };
+        walk(node);
+        return names;
+    }
+
+    // Add data-dependency edges from all vars referenced in `astNode` -> `nodeId`
+    _dataDeps(astNode, nodeId) {
+        this._refsIn(astNode).forEach(name => {
+            const producer = this._getProducer(name);
+            if (producer) this.addEdge(producer, nodeId, "data", name);
+        });
+    }
+
+    // --- Build ----------------------------------------------------------------
+
+    build(ast) {
+        const entryId = this.addNode("entry", "START", {});
+        const exitId  = this.addNode("exit",  "END",   {});
+
+        const lastId = this._visitProgram(ast.body, entryId);
+        this.addEdge(lastId, exitId, "seq");
+
+        return { nodes: this.nodes, edges: this.edges, entryId, exitId };
+    }
+
+    // Visit a list of statements, chaining them sequentially.
+    // Returns the id of the last node produced.
+    _visitProgram(stmts, prevId) {
+        let last = prevId;
+        for (const stmt of stmts) {
+            const next = this._visitStmt(stmt, last);
+            if (next) last = next;
+        }
+        return last;
+    }
+
+    _visitStmt(node, prevId) {
+        if (!node) return prevId;
+
+        switch (node.type) {
+
+            case "VariableDeclaration": {
+                const label = `let ${node.id.name}`;
+                const id = this.addNode("declare", label, { varName: node.id.name, line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.init, id);
+                this._setProducer(node.id.name, id);
+                return id;
+            }
+
+            case "AssignmentExpression":
+            case "ExpressionStatement": {
+                const inner = node.type === "ExpressionStatement" ? node.expression : node;
+                if (inner.type === "AssignmentExpression") {
+                    const varName = inner.left?.name ?? inner.left?.property ?? "?";
+                    const id = this.addNode("assign", `${varName} = ...`, { line: node.line });
+                    this.addEdge(prevId, id, "seq");
+                    this._dataDeps(inner.right, id);
+                    if (inner.left?.name) this._setProducer(inner.left.name, id);
+                    return id;
+                }
+                if (inner.type === "CallExpression") {
+                    return this._visitCall(inner, prevId, node.line);
+                }
+                const id = this.addNode("expr", this._exprLabel(inner), { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(inner, id);
+                return id;
+            }
+
+            case "HttpStatement": {
+                const method = node.method.replace("_HTTP", "");
+                const urlStr = node.url?.value ?? node.url?.name ?? "...";
+                const label  = `${method} "${urlStr}"${node.binding ? `\n-> ${node.binding.name}` : ""}`;
+                const id = this.addNode("http", label, {
+                    method, url: urlStr,
+                    binding: node.binding?.name ?? null,
+                    line: node.line,
+                });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.url, id);
+                if (node.body) this._dataDeps(node.body, id);
+                if (node.binding) this._setProducer(node.binding.name, id);
+                return id;
+            }
+
+            case "ConnectStatement": {
+                const id = this.addNode("db_connect",
+                    `connect ${node.driver}${node.binding ? `\n-> ${node.binding.name}` : ""}`,
+                    { driver: node.driver, line: node.line }
+                );
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.config, id);
+                if (node.binding) this._setProducer(node.binding.name, id);
+                this._setProducer(node.driver, id);
+                return id;
+            }
+
+            case "FindStatement": {
+                const label = `find ${node.collection}${node.filter ? " where {...}" : ""}${node.limit ? ` limit ${node.limit?.value ?? "n"}` : ""}${node.binding ? `\n-> ${node.binding.name}` : ""}`;
+                const id = this.addNode("db_find", label, {
+                    collection: node.collection,
+                    binding: node.binding?.name ?? null,
+                    line: node.line,
+                });
+                this.addEdge(prevId, id, "seq");
+                if (node.filter) this._dataDeps(node.filter, id);
+                if (node.binding) this._setProducer(node.binding.name, id);
+                return id;
+            }
+
+            case "InsertStatement": {
+                const label = `insert into ${node.collection}${node.binding ? `\n-> ${node.binding.name}` : ""}`;
+                const id = this.addNode("db_insert", label, {
+                    collection: node.collection,
+                    binding: node.binding?.name ?? null,
+                    line: node.line,
+                });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.document, id);
+                if (node.binding) this._setProducer(node.binding.name, id);
+                return id;
+            }
+
+            case "UpdateStatement": {
+                const label = `update ${node.collection} set {...}${node.binding ? `\n-> ${node.binding.name}` : ""}`;
+                const id = this.addNode("db_update", label, {
+                    collection: node.collection,
+                    binding: node.binding?.name ?? null,
+                    line: node.line,
+                });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.updates, id);
+                if (node.filter) this._dataDeps(node.filter, id);
+                if (node.binding) this._setProducer(node.binding.name, id);
+                return id;
+            }
+
+            case "RespondStatement": {
+                const id = this.addNode("respond", "respond {...}", { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.value, id);
+                return id;
+            }
+
+            case "ReturnStatement": {
+                const id = this.addNode("return", "return", { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.argument, id);
+                return id;
+            }
+
+            case "FunctionDeclaration": {
+                const id = this.addNode("fn_def", `fn ${node.name.name}(${node.params.map(p => p.name).join(", ")})`, {
+                    fnName: node.name.name,
+                    params: node.params.map(p => p.name),
+                    line: node.line,
+                });
+                this.addEdge(prevId, id, "seq");
+                this._fnNodes.set(node.name.name, id);
+                this._setProducer(node.name.name, id);
+
+                // Visit the function body as a subgraph, branching from the fn_def node
+                const bodyEntry = this.addNode("entry", `${node.name.name}: entry`, { line: node.line });
+                this.addEdge(id, bodyEntry, "call", "body");
+                this._visitProgram(node.body.body, bodyEntry);
+                return id;
+            }
+
+            case "IfStatement": {
+                const testLabel = this._exprLabel(node.test);
+                const id = this.addNode("if", `if ${testLabel}`, { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.test, id);
+
+                // Consequent branch
+                const thenEntry = this.addNode("entry", "then", { line: node.line });
+                this.addEdge(id, thenEntry, "control", "true");
+                const thenExit = this._visitProgram(node.consequent.body, thenEntry);
+
+                // Alternate branch
+                let elseExit = null;
+                if (node.alternate) {
+                    const elseEntry = this.addNode("entry", "else", { line: node.line });
+                    this.addEdge(id, elseEntry, "control", "false");
+                    const altBody = node.alternate.type === "BlockStatement"
+                        ? node.alternate.body
+                        : [node.alternate];
+                    elseExit = this._visitProgram(altBody, elseEntry);
+                }
+
+                // Merge point
+                const mergeId = this.addNode("entry", "merge", { line: node.line });
+                this.addEdge(thenExit, mergeId, "seq");
+                if (elseExit) this.addEdge(elseExit, mergeId, "seq");
+                else this.addEdge(id, mergeId, "control", "false");
+                return mergeId;
+            }
+
+            case "WhileStatement": {
+                const testLabel = this._exprLabel(node.test);
+                const id = this.addNode("while", `while ${testLabel}`, { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.test, id);
+
+                const bodyEntry = this.addNode("entry", "loop body", {});
+                this.addEdge(id, bodyEntry, "control", "true");
+                const bodyExit = this._visitProgram(node.body.body, bodyEntry);
+                this.addEdge(bodyExit, id, "seq"); // loop back
+
+                const loopExit = this.addNode("entry", "loop exit", {});
+                this.addEdge(id, loopExit, "control", "false");
+                return loopExit;
+            }
+
+            case "ForStatement": {
+                const id = this.addNode("for", `for ${node.id.name} in ...`, { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                this._dataDeps(node.iterable, id);
+
+                const bodyEntry = this.addNode("entry", "loop body", {});
+                this.addEdge(id, bodyEntry, "control", "iter");
+                this._setProducer(node.id.name, bodyEntry);
+                const bodyExit = this._visitProgram(node.body.body, bodyEntry);
+                this.addEdge(bodyExit, id, "seq"); // loop back
+
+                const loopExit = this.addNode("entry", "loop exit", {});
+                this.addEdge(id, loopExit, "control", "done");
+                return loopExit;
+            }
+
+            case "ImportStatement": {
+                const what = node.defaultImport ?? node.specifiers.join(", ");
+                const id = this.addNode("import", `import ${what}\nfrom "${node.source}"`, { line: node.line });
+                this.addEdge(prevId, id, "seq");
+                node.specifiers.forEach(s => this._setProducer(s, id));
+                if (node.defaultImport) this._setProducer(node.defaultImport, id);
+                return id;
+            }
+
+            case "BlockStatement":
+                return this._visitProgram(node.body, prevId);
+
+            default:
+                return prevId;
+        }
+    }
+
+    _visitCall(node, prevId, line) {
+        const fnName = node.callee?.name ?? node.callee?.property ?? "fn";
+        const id = this.addNode("call", `${fnName}(...)`, { fnName, line });
+        this.addEdge(prevId, id, "seq");
+        node.arguments?.forEach(a => this._dataDeps(a, id));
+
+        // If it's a known user function, draw a call edge to its definition
+        const fnDefId = this._fnNodes.get(fnName);
+        if (fnDefId) this.addEdge(id, fnDefId, "call", fnName);
+
+        return id;
+    }
+
+    _exprLabel(node) {
+        if (!node) return "?";
+        switch (node.type) {
+            case "Literal":           return JSON.stringify(node.value);
+            case "Identifier":        return node.name;
+            case "BinaryExpression":  return `${this._exprLabel(node.left)} ${node.operator} ${this._exprLabel(node.right)}`;
+            case "UnaryExpression":   return `${node.operator}${this._exprLabel(node.argument)}`;
+            case "MemberExpression":  return `${this._exprLabel(node.object)}.${node.property}`;
+            case "CallExpression":    return `${this._exprLabel(node.callee)}(...)`;
+            default:                  return node.type.replace("Expression", "").toLowerCase();
+        }
+    }
+
+    // --- Serialise to plain JSON (for visualizer / external tools) ------------
+
+    toJSON() {
+        return {
+            nodes: Array.from(this.nodes.values()),
+            edges: this.edges,
+        };
+    }
+
+    // --- Analysis helpers (useful for research presentation) ------------------
+
+    /**
+     * Returns nodes that have no incoming data edges -- "root" producers.
+     * These are variables / operations that depend on nothing else.
+     */
+    sourceNodes() {
+        const hasIncoming = new Set(this.edges.filter(e => e.kind === "data").map(e => e.to));
+        return Array.from(this.nodes.values()).filter(n =>
+            n.kind !== "entry" && n.kind !== "exit" && !hasIncoming.has(n.id)
+        );
+    }
+
+    /**
+     * Returns pairs of nodes that could theoretically execute in parallel
+     * because they share no data dependency path between them.
+     */
+    parallelCandidates() {
+        // Build adjacency for data deps only
+        const depends = new Map(); // nodeId -> Set of transitive dependencies
+        const dataEdges = this.edges.filter(e => e.kind === "data");
+
+        const getDeps = (id, visited = new Set()) => {
+            if (visited.has(id)) return visited;
+            visited.add(id);
+            dataEdges.filter(e => e.to === id).forEach(e => getDeps(e.from, visited));
+            return visited;
+        };
+
+        const candidates = [];
+        const nodeList = Array.from(this.nodes.values()).filter(n =>
+            !["entry", "exit"].includes(n.kind)
+        );
+
+        for (let i = 0; i < nodeList.length; i++) {
+            for (let j = i + 1; j < nodeList.length; j++) {
+                const a = nodeList[i], b = nodeList[j];
+                const depsA = getDeps(a.id);
+                const depsB = getDeps(b.id);
+                if (!depsA.has(b.id) && !depsB.has(a.id)) {
+                    candidates.push([a.id, b.id]);
+                }
+            }
+        }
+        return candidates;
+    }
+
+    /**
+     * Topological sort of nodes (sequential + data edges only).
+     * Returns an ordered array of node ids representing a valid execution order.
+     */
+    topologicalOrder() {
+        const inDegree = new Map();
+        const adj = new Map();
+        this.nodes.forEach((_, id) => { inDegree.set(id, 0); adj.set(id, []); });
+
+        this.edges
+            .filter(e => e.kind === "seq" || e.kind === "data")
+            .forEach(e => {
+                adj.get(e.from)?.push(e.to);
+                inDegree.set(e.to, (inDegree.get(e.to) ?? 0) + 1);
+            });
+
+        const queue = [];
+        inDegree.forEach((deg, id) => { if (deg === 0) queue.push(id); });
+
+        const order = [];
+        while (queue.length) {
+            const id = queue.shift();
+            order.push(id);
+            adj.get(id)?.forEach(next => {
+                inDegree.set(next, inDegree.get(next) - 1);
+                if (inDegree.get(next) === 0) queue.push(next);
+            });
+        }
+
+        return order;
+    }
+}
+
+/**
+ * Build an execution graph from a Kova AST.
+ * Convenience wrapper used by runKova and the visualizer.
+ */
+function buildGraph(ast) {
+    const g = new ExecutionGraph();
+    const graph = g.build(ast);
+    return { graph, graphInstance: g };
+}
+
+
+function kovaParseGraph(code) {
+  var lex = new Lexer(code);
+  var tokens = lex.tokenize();
+  var p = new Parser();
+  var ast = p.parseProgram(tokens);
+  var g = new ExecutionGraph();
+  var result = g.build(ast);
+  return {
+    json: g.toJSON(),
+    sourceNodes: g.sourceNodes(),
+    parallelCandidates: g.parallelCandidates(),
+    topologicalOrder: g.topologicalOrder(),
+    entryId: result.entryId,
+    exitId: result.exitId,
+  };
+}
+
+</script>
+<script>
+var NODE_W = 168, NODE_H = 44;
+
+var KIND_COLOR = {
+  'entry':      '#30363d',
+  'exit':       '#30363d',
+  'declare':    '#388bfd',
+  'assign':     '#58a6ff',
+  'http':       '#f0883e',
+  'db_connect': '#7ee787',
+  'db_find':    '#7ee787',
+  'db_insert':  '#56d364',
+  'db_update':  '#3fb950',
+  'respond':    '#d2a8ff',
+  'return':     '#d2a8ff',
+  'fn_def':     '#ffa657',
+  'call':       '#ffa657',
+  'if':         '#f85149',
+  'while':      '#ff7b72',
+  'for':        '#ff9492',
+  'import':     '#79c0ff',
+  'expr':       '#484f58',
+};
+
+var EDGE_COLOR = {
+  'seq':     '#484f58',
+  'data':    '#388bfd',
+  'control': '#f85149',
+  'call':    '#ffa657',
+  'binding': '#7ee787',
+};
+
+var EDGE_DASH = {
+  'seq':     'none',
+  'data':    '6,3',
+  'control': '4,2',
+  'call':    '7,2',
+  'binding': '3,3',
+};
+
+//  Entry point 
+
+var currentGraph = null;
+
+function runGraph() {
+  var code    = document.getElementById('editor').value;
+  var errEl   = document.getElementById('error-overlay');
+  var errBox  = document.getElementById('error-box');
+  var emptyEl = document.getElementById('empty-state');
+
+  errEl.classList.remove('visible');
+  emptyEl.style.display = 'none';
+
+  try {
+    currentGraph = kovaParseGraph(code);
+    render(currentGraph);
+    updateStats(currentGraph);
+    updateAnalysis(currentGraph);
+  } catch(e) {
+    errBox.innerHTML = '<b>Parse Error</b><br>' + (e.message || String(e));
+    errEl.classList.add('visible');
+    document.getElementById('stat-nodes').textContent = '?';
+    document.getElementById('stat-edges').textContent = '?';
+    document.getElementById('stat-par').textContent   = '?';
+  }
+}
+
+//  Render 
+
+function render(graph) {
+  var svg = d3.select('#svg');
+  svg.selectAll('*').remove();
+
+  var nodes = graph.json.nodes;
+  var edges = graph.json.edges;
+  if (!nodes.length) return;
+
+  var positions = layoutNodes(nodes, edges);
+
+  var defs = svg.append('defs');
+  Object.keys(EDGE_COLOR).forEach(function(kind) {
+    defs.append('marker')
+      .attr('id', 'arrow-' + kind)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 10).attr('refY', 0)
+      .attr('markerWidth', 6).attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', EDGE_COLOR[kind]);
+  });
+
+  var shadow = defs.append('filter')
+    .attr('id', 'node-shadow')
+    .attr('x','-20%').attr('y','-20%')
+    .attr('width','140%').attr('height','140%');
+  shadow.append('feDropShadow')
+    .attr('dx', 0).attr('dy', 2)
+    .attr('stdDeviation', 3)
+    .attr('flood-color', 'rgba(0,0,0,.5)');
+
+  var g = svg.append('g');
+
+  var zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', function(e) { g.attr('transform', e.transform); });
+  svg.call(zoom);
+
+  // Edges
+  var edgeG = g.append('g');
+
+  edgeG.selectAll('path')
+    .data(edges)
+    .join('path')
+    .attr('fill', 'none')
+    .attr('stroke', function(d) { return EDGE_COLOR[d.kind] || '#484f58'; })
+    .attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', function(d) { return EDGE_DASH[d.kind] || 'none'; })
+    .attr('marker-end', function(d) { return 'url(#arrow-' + d.kind + ')'; })
+    .attr('opacity', 0.75)
+    .attr('d', function(d) {
+      var s = positions.get(d.from);
+      var t = positions.get(d.to);
+      if (!s || !t) return '';
+      return edgePath(s, t);
+    });
+
+  edgeG.selectAll('text.elabel')
+    .data(edges.filter(function(e) { return e.label && e.kind !== 'seq'; }))
+    .join('text')
+    .attr('class', 'elabel')
+    .attr('font-size', 9)
+    .attr('font-family', 'IBM Plex Mono, monospace')
+    .attr('fill', function(d) { return EDGE_COLOR[d.kind] || '#484f58'; })
+    .attr('text-anchor', 'middle')
+    .attr('opacity', 0.85)
+    .attr('x', function(d) {
+      var s = positions.get(d.from), t = positions.get(d.to);
+      return s && t ? (s.x + t.x) / 2 : 0;
+    })
+    .attr('y', function(d) {
+      var s = positions.get(d.from), t = positions.get(d.to);
+      return s && t ? (s.y + t.y) / 2 - 5 : 0;
+    })
+    .text(function(d) { return d.label; });
+
+  // Nodes
+  var nodeG = g.append('g');
+
+  var nodeEls = nodeG.selectAll('g.node')
+    .data(nodes)
+    .join('g')
+    .attr('class', 'node')
+    .attr('style', function(d, i) { return 'animation-delay:' + (i * 18) + 'ms'; })
+    .attr('transform', function(d) {
+      var p = positions.get(d.id) || { x: 0, y: 0 };
+      return 'translate(' + (p.x - NODE_W / 2) + ',' + (p.y - NODE_H / 2) + ')';
+    })
+    .on('click', function(event, d) {
+      nodeEls.classed('selected', false);
+      d3.select(event.currentTarget).classed('selected', true);
+      showInspector(d);
+    });
+
+  nodeEls.append('rect')
+    .attr('width', NODE_W)
+    .attr('height', function(d) {
+      return (d.label || '').split('\n').length > 1 ? NODE_H + 14 : NODE_H;
+    })
+    .attr('rx', 7).attr('ry', 7)
+    .attr('fill', '#0d1117')
+    .attr('stroke', function(d) { return KIND_COLOR[d.kind] || '#484f58'; })
+    .attr('stroke-width', 1.5)
+    .attr('filter', 'url(#node-shadow)');
+
+  nodeEls.append('text')
+    .attr('x', 8).attr('y', 11)
+    .attr('font-size', 8)
+    .attr('font-family', 'IBM Plex Mono, monospace')
+    .attr('fill', function(d) { return KIND_COLOR[d.kind] || '#484f58'; })
+    .attr('font-weight', '600')
+    .attr('letter-spacing', '.8')
+    .text(function(d) { return d.kind.toUpperCase(); });
+
+  nodeEls.each(function(d) {
+    var lines = (d.label || '').split('\n');
+    lines.forEach(function(line, i) {
+      d3.select(this).append('text')
+        .attr('x', 8)
+        .attr('y', 24 + i * 14)
+        .attr('font-size', 11)
+        .attr('font-family', 'IBM Plex Mono, monospace')
+        .attr('fill', '#e6edf3')
+        .text(line.length > 19 ? line.slice(0, 18) + '...' : line);
+    }, this);
+  });
+
+  var bounds = getBounds(positions);
+  var svgEl  = document.getElementById('svg');
+  var W = svgEl.clientWidth, H = svgEl.clientHeight;
+  var pad   = 80;
+  var scaleX = (W - pad * 2) / (bounds.w || 1);
+  var scaleY = (H - pad * 2) / (bounds.h || 1);
+  var scale  = Math.min(scaleX, scaleY, 1.4);
+  var tx = (W - bounds.w * scale) / 2 - bounds.minX * scale;
+  var ty = (H - bounds.h * scale) / 2 - bounds.minY * scale;
+  svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+//  Layout 
+
+function layoutNodes(nodes, edges) {
+  var positions = new Map();
+  if (!nodes.length) return positions;
+
+  var seqAdj = new Map(nodes.map(function(n) { return [n.id, []]; }));
+  edges.filter(function(e) { return e.kind === 'seq'; }).forEach(function(e) {
+    var arr = seqAdj.get(e.from);
+    if (arr) arr.push(e.to);
+  });
+
+  var layer = new Map();
+  var queue = [nodes[0].id];
+  var vis   = new Set([nodes[0].id]);
+  layer.set(nodes[0].id, 0);
+
+  while (queue.length) {
+    var id  = queue.shift();
+    var nl  = (layer.get(id) || 0) + 1;
+    (seqAdj.get(id) || []).forEach(function(next) {
+      if (!vis.has(next)) {
+        vis.add(next);
+        layer.set(next, nl);
+        queue.push(next);
+      }
+    });
+  }
+
+  nodes.forEach(function(n) { if (!layer.has(n.id)) layer.set(n.id, 0); });
+
+  var layers = new Map();
+  layer.forEach(function(l, id) {
+    if (!layers.has(l)) layers.set(l, []);
+    layers.get(l).push(id);
+  });
+
+  var YGAP = 110, XGAP = 200;
+  layers.forEach(function(ids, l) {
+    var totalW = ids.length * XGAP;
+    ids.forEach(function(id, i) {
+      positions.set(id, {
+        x: -totalW / 2 + i * XGAP + XGAP / 2,
+        y: l * YGAP,
+      });
+    });
+  });
+
+  return positions;
+}
+
+function getBounds(positions) {
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  positions.forEach(function(p) {
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+  });
+  return { minX: minX, minY: minY, w: maxX - minX + NODE_W, h: maxY - minY + NODE_H };
+}
+
+function edgePath(s, t) {
+  var dx = t.x - s.x;
+  var mx = (s.x + t.x) / 2;
+  var my = (s.y + t.y) / 2;
+  var curve = Math.abs(dx) < 10
+    ? ('C' + (s.x + 50) + ',' + (s.y + 35) + ' ' + (t.x + 50) + ',' + (t.y - 35))
+    : ('Q' + mx + ',' + my);
+  return 'M' + s.x + ',' + (s.y + NODE_H / 2) + ' ' + curve + ' ' + t.x + ',' + (t.y - NODE_H / 2);
+}
+
+//  Stats / Analysis 
+
+function updateStats(graph) {
+  document.getElementById('stat-nodes').textContent = graph.json.nodes.length;
+  document.getElementById('stat-edges').textContent = graph.json.edges.length;
+  document.getElementById('stat-par').textContent   = graph.parallelCandidates.length;
+}
+
+function updateAnalysis(graph) {
+  var panel  = document.getElementById('analysis-panel');
+  var nodes  = graph.json.nodes;
+  var edges  = graph.json.edges;
+  var src    = graph.sourceNodes || [];
+  var par    = graph.parallelCandidates || [];
+
+  var kindCounts = {};
+  nodes.forEach(function(n) { kindCounts[n.kind] = (kindCounts[n.kind] || 0) + 1; });
+
+  var edgeCounts = {};
+  edges.forEach(function(e) { edgeCounts[e.kind] = (edgeCounts[e.kind] || 0) + 1; });
+
+  var kindChips = Object.keys(kindCounts).map(function(k) {
+    var c = KIND_COLOR[k] || '#8b949e';
+    return '<span class="chip" style="background:#0d1117;color:' + c + ';border:1px solid ' + c + '">' + k + ' x' + kindCounts[k] + '</span>';
+  }).join('');
+
+  var edgeChips = Object.keys(edgeCounts).map(function(k) {
+    var c = EDGE_COLOR[k] || '#8b949e';
+    return '<span class="chip" style="background:#0d1117;color:' + c + ';border:1px solid ' + c + '">' + k + ' x' + edgeCounts[k] + '</span>';
+  }).join('');
+
+  var srcNames = src.map(function(n) { return n.label.split('\n')[0]; }).join(', ') || '--';
+
+  var parText = par.length > 0
+    ? (par.length + ' node pairs share no data dependency.')
+    : 'None detected.';
+
+  panel.innerHTML =
+    '<div style="margin-bottom:10px">' +
+      '<b style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-sans)">Node kinds</b>' +
+      '<div style="margin-top:5px">' + kindChips + '</div>' +
+    '</div>' +
+    '<div style="margin-bottom:10px">' +
+      '<b style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-sans)">Edge kinds</b>' +
+      '<div style="margin-top:5px">' + edgeChips + '</div>' +
+    '</div>' +
+    '<div style="margin-bottom:10px">' +
+      '<b style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-sans)">Root producers (' + src.length + ')</b>' +
+      '<p style="margin-top:4px;font-size:10px;color:var(--muted);line-height:1.6;font-family:var(--font-sans)">' + srcNames + '</p>' +
+    '</div>' +
+    '<div>' +
+      '<b style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-sans)">Parallelizable (' + par.length + ')</b>' +
+      '<p style="margin-top:4px;font-size:10px;color:var(--muted);line-height:1.6;font-family:var(--font-sans)">' + parText + '</p>' +
+    '</div>';
+
+  var lc = document.getElementById('legend-chips');
+  lc.innerHTML = Object.keys(KIND_COLOR).map(function(kind) {
+    var color = KIND_COLOR[kind];
+    return '<span class="chip" style="background:#0d1117;color:' + color + ';border:1px solid ' + color + '">' + kind + '</span>';
+  }).join('');
+}
+
+function showInspector(d) {
+  var c = KIND_COLOR[d.kind] || '#8b949e';
+  var meta = d.meta || {};
+  var metaRows = Object.keys(meta)
+    .filter(function(k) { return k !== 'line'; })
+    .map(function(k) {
+      return '<tr><td style="color:var(--muted);padding-right:8px;white-space:nowrap">' + k + '</td>' +
+             '<td style="color:var(--text)">' + JSON.stringify(meta[k]) + '</td></tr>';
+    }).join('');
+
+  var labelHtml = (d.label || '').replace(/\n/g, '<br>');
+
+  document.getElementById('inspector').innerHTML =
+    '<div style="margin-bottom:6px">' +
+      '<span class="chip" style="background:#0d1117;color:' + c + ';border:1px solid ' + c + '">' + d.kind + '</span>' +
+    '</div>' +
+    '<div style="font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.5">' + labelHtml + '</div>' +
+    '<table style="font-size:10px;font-family:var(--font-sans);border-collapse:collapse;width:100%">' +
+      '<tr><td style="color:var(--muted);padding-right:8px">id</td><td style="color:var(--text)">' + d.id + '</td></tr>' +
+      (d.line != null ? '<tr><td style="color:var(--muted);padding-right:8px">line</td><td style="color:var(--text)">' + d.line + '</td></tr>' : '') +
+      metaRows +
+    '</table>';
+}
+
+// Auto-run
+document.addEventListener('DOMContentLoaded', runGraph);
+document.getElementById('editor') && document.getElementById('editor').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runGraph(); }
+});
+
+</script>
+</body>
+</html>

@@ -299,3 +299,138 @@ const total = passed + failed;
 console.log(`  ${passed} passed, ${failed} failed out of ${total} tests (${((passed/total)*100).toFixed(1)}%)`);
 console.log(`${"─".repeat(56)}\n`);
 if (failed > 0) process.exit(1);
+
+// ─── Execution Graph ──────────────────────────────────────────────────────────
+console.log("\n Execution Graph");
+
+test("graph is returned from runKova", () => {
+    const r = runKova(`let x = 5  return x`);
+    assert(r.graph != null, "Expected graph in result");
+    assert(r.graph.json != null);
+});
+
+test("graph has entry and exit nodes", () => {
+    const r = runKova(`let x = 5`);
+    const kinds = r.graph.json.nodes.map(n => n.kind);
+    assert(kinds.includes("entry"), "No entry node");
+    assert(kinds.includes("exit"),  "No exit node");
+});
+
+test("variable declaration produces declare node", () => {
+    const r = runKova(`let name = "Alice"`);
+    const nodes = r.graph.json.nodes;
+    const declNode = nodes.find(n => n.kind === "declare");
+    assert(declNode != null, "No declare node found");
+    assert(declNode.label.includes("name"), `Expected label to include 'name', got: ${declNode.label}`);
+});
+
+test("HTTP statement produces http node", () => {
+    const r = runKova(`GET "https://api.example.com"`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "http"), "No http node");
+});
+
+test("HTTP into binding captured in node meta", () => {
+    const r = runKova(`GET "https://api.example.com/users" into users`);
+    const httpNode = r.graph.json.nodes.find(n => n.kind === "http");
+    assert(httpNode?.meta?.binding === "users", `Expected binding='users', got: ${httpNode?.meta?.binding}`);
+});
+
+test("data dependency edge created for variable reference", () => {
+    const r = runKova(`let x = 5\nlet y = x + 1`);
+    const edges = r.graph.json.edges;
+    assert(edges.some(e => e.kind === "data" && e.label === "x"), "No data edge for x");
+});
+
+test("if statement produces if node with control edges", () => {
+    const r = runKova(`let x = 5\nif x > 3 { return 1 } else { return 0 }`);
+    const nodes = r.graph.json.nodes;
+    const edges = r.graph.json.edges;
+    assert(nodes.some(n => n.kind === "if"), "No if node");
+    assert(edges.some(e => e.kind === "control" && e.label === "true"), "No control-true edge");
+    assert(edges.some(e => e.kind === "control" && e.label === "false"), "No control-false edge");
+});
+
+test("function declaration produces fn_def node", () => {
+    const r = runKova(`fn add(a, b) { return a + b }`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "fn_def" && n.label.includes("add")), "No fn_def node for add");
+});
+
+test("DB connect produces db_connect node", () => {
+    const r = runKova(`connect mysql using { host: "localhost", database: "app" }`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "db_connect"), "No db_connect node");
+});
+
+test("find statement produces db_find node", () => {
+    const r = runKova(`find users where { active: true } into results`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "db_find"), "No db_find node");
+});
+
+test("insert produces db_insert node", () => {
+    const r = runKova(`insert into users { name: "Alice" } into doc`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "db_insert"), "No db_insert node");
+});
+
+test("respond produces respond node", () => {
+    const r = runKova(`respond { status: 200, body: "ok" }`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "respond"), "No respond node");
+});
+
+test("topological order includes all nodes", () => {
+    const r = runKova(`let x = 5\nlet y = x + 1\nreturn y`);
+    const topoLen = r.graph.topologicalOrder.length;
+    const nodeLen = r.graph.json.nodes.length;
+    assert(topoLen > 0, "Topological order is empty");
+    assert(topoLen <= nodeLen, `Topo order (${topoLen}) exceeds node count (${nodeLen})`);
+});
+
+test("source nodes exist and exclude entry/exit", () => {
+    const r = runKova(`let x = 5\nlet y = 10`);
+    const sources = r.graph.sourceNodes;
+    assert(Array.isArray(sources), "sourceNodes not an array");
+    assert(sources.every(n => !["entry","exit"].includes(n.kind)), "Source nodes include entry/exit");
+});
+
+test("while loop produces while node with loop-back edge", () => {
+    const r = runKova(`let i = 0\nwhile i < 5 { i += 1 }`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "while"), "No while node");
+});
+
+test("for loop produces for node", () => {
+    const r = runKova(`let arr = [1,2,3]\nfor x in arr { print(x) }`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "for"), "No for node");
+});
+
+test("import produces import node", () => {
+    const r = runKova(`import { handler } from "./routes"`);
+    const nodes = r.graph.json.nodes;
+    assert(nodes.some(n => n.kind === "import"), "No import node");
+});
+
+test("complex program graph has multiple node kinds", () => {
+    const r = runKova(`
+connect mysql using { host: "localhost", database: "shop" }
+find users where { active: true } limit 10 into users
+POST "https://api.example.com/log" save { count: 10 }
+respond { status: 200, body: users }`);
+
+    const kinds = new Set(r.graph.json.nodes.map(n => n.kind));
+    assert(kinds.has("db_connect"), "Missing db_connect");
+    assert(kinds.has("db_find"),    "Missing db_find");
+    assert(kinds.has("http"),       "Missing http");
+    assert(kinds.has("respond"),    "Missing respond");
+});
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+console.log(`\n${"─".repeat(56)}`);
+const total2 = passed + failed;
+console.log(`  ${passed} passed, ${failed} failed out of ${total2} tests (${((passed/total2)*100).toFixed(1)}%)`);
+console.log(`${"─".repeat(56)}\n`);
+if (failed > 0) process.exit(1);
