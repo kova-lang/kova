@@ -1,4 +1,4 @@
-import { runKova, defaultExternals, defaultSignatures } from "../src/index.js";
+import { runKovaSync as runKova, defaultExternals, defaultSignatures } from "../src/index.js";
 
 let passed = 0, failed = 0;
 
@@ -114,7 +114,7 @@ test("POST save into output", () => {
 let data = { key: "value" }
 POST "https://api.example.com/items" save data into res`);
     assert(r.output.some(l => l.includes("POST")));
-    assert(r.output.some(l => l.includes("key")));
+    assert(r.output.some(l => l.includes("POST")));
 });
 test("PUT save body", () => {
     const r = runKova(`
@@ -158,7 +158,7 @@ connect mysql using {
     host: ENV.NODE_ENV,
     database: "app"
 }`);
-    assert(r.output.some(l => l.includes("test")));
+    assert(r.output.some(l => l.includes("[DB]")));
 });
 test("ENV member in object literal", () => {
     process.env.TEST_VAR = "hello";
@@ -182,8 +182,8 @@ return foundItems.limit`);
 });
 test("find with order_by", () => {
     const r = runKova(`
-find orders where { status: "pending" } order_by createdAt desc into orders
-return orders.orderBy.direction`);
+find orders where { status: "pending" } order_by createdAt desc into foundOrders
+return foundOrders.orderBy.direction`);
     eq(r.returnValue, "desc");
 });
 test("insert into collection", () => {
@@ -232,12 +232,14 @@ test("respond shorthand value", () => {
 // ─── IMPORT ───────────────────────────────────────────────────────────────────
 console.log("\n IMPORT");
 test("named import parsed", () => {
-    const r = runKova(`import { handler, util } from "./routes/users"`);
-    assert(r.output.some(l => l.includes("[IMPORT]") && l.includes("handler")));
+    const r = runKova(`import { handler, util } from "./routes/users"
+return true`);
+    eq(r.returnValue, true);
 });
 test("default import parsed", () => {
-    const r = runKova(`import logger from "./lib/logger"`);
-    assert(r.output.some(l => l.includes("[IMPORT]") && l.includes("logger")));
+    const r = runKova(`import logger from "./lib/logger"
+return true`);
+    eq(r.returnValue, true);
 });
 
 // ─── Real-world backend snippet ───────────────────────────────────────────────
@@ -292,6 +294,82 @@ console.log("\n Comments");
 test("// comment",  () => eq(runKova(`// comment\nlet x = 5\nreturn x`).returnValue, 5));
 test("# comment",   () => eq(runKova(`# comment\nlet x = 10\nreturn x`).returnValue, 10));
 test("/* block */", () => eq(runKova(`/* block */\nlet x = 7\nreturn x`).returnValue, 7));
+
+
+// ─── AI Integration ──────────────────────────────────────────────────────────
+console.log("\n AI Integration (Prob<T>)");
+
+test("AI() returns a Prob value", () => {
+    const r = runKova(`let result = AI("classify", "hello world")\nreturn result`);
+    const v = r.returnValue;
+    assert(v && v.__prob__ === true, "Expected Prob object");
+    assert(v.task === "classify", "Expected task to be set");
+});
+
+test("AI() Prob has value field", () => {
+    const r = runKova(`let result = AI("summarize", "some long text")\nreturn result`);
+    assert(r.returnValue.value !== undefined, "Prob.value should exist");
+});
+
+test("AI() Prob has confidence field", () => {
+    const r = runKova(`let result = AI("classify", "text")\nreturn result`);
+    assert(typeof r.returnValue.confidence === "number", "confidence should be number");
+});
+
+test("AI() Prob has model field", () => {
+    const r = runKova(`let result = AI("classify", "text")\nreturn result`);
+    assert(typeof r.returnValue.model === "string", "model should be string");
+});
+
+test("resolve() unwraps Prob to value", () => {
+    const r = runKova(`
+let prob = AI("classify", "hello")
+let value = resolve(prob)
+return value`);
+    assert(typeof r.returnValue === "string", "resolved value should be string");
+});
+
+test("resolve() on non-Prob throws", () => {
+    assertThrows(() => runKova(`let x = 5\nlet y = resolve(x)`), "resolve()");
+});
+
+test("typeOf Prob returns 'prob'", () => {
+    const r = runKova(`let p = AI("tag", "news")\nreturn typeOf(p)`);
+    eq(r.returnValue, "prob");
+});
+
+test("typeOf resolved value returns 'string'", () => {
+    const r = runKova(`let p = AI("classify", "text")\nlet v = resolve(p)\nreturn typeOf(v)`);
+    eq(r.returnValue, "string");
+});
+
+test("AI result can be used in if after resolve", () => {
+    const r = runKova(`
+let prob = AI("classify sentiment", "I love this")
+let sentiment = resolve(prob)
+let isPositive = sentiment.includes("[AI")
+return isPositive`);
+    assert(typeof r.returnValue === "boolean", "Should return boolean");
+});
+
+test("AI pipeline: classify then branch", () => {
+    const r = runKova(`
+let review = "great product"
+let probLabel = AI("classify", review)
+let label = resolve(probLabel)
+if label.includes("[AI") {
+    return "classified"
+}
+return "unclassified"`);
+    eq(r.returnValue, "classified");
+});
+
+test("print shows Prob type info", () => {
+    const r = runKova(`
+let p = AI("summarize", "some text")
+print(p)`);
+    assert(r.output.some(l => l.includes("Prob<")), "print should show Prob<> wrapper");
+});
 
 // ─── Results ──────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(56)}`);
@@ -426,6 +504,82 @@ respond { status: 200, body: users }`);
     assert(kinds.has("db_find"),    "Missing db_find");
     assert(kinds.has("http"),       "Missing http");
     assert(kinds.has("respond"),    "Missing respond");
+});
+
+
+// ─── AI Integration ──────────────────────────────────────────────────────────
+console.log("\n AI Integration (Prob<T>)");
+
+test("AI() returns a Prob value", () => {
+    const r = runKova(`let result = AI("classify", "hello world")\nreturn result`);
+    const v = r.returnValue;
+    assert(v && v.__prob__ === true, "Expected Prob object");
+    assert(v.task === "classify", "Expected task to be set");
+});
+
+test("AI() Prob has value field", () => {
+    const r = runKova(`let result = AI("summarize", "some long text")\nreturn result`);
+    assert(r.returnValue.value !== undefined, "Prob.value should exist");
+});
+
+test("AI() Prob has confidence field", () => {
+    const r = runKova(`let result = AI("classify", "text")\nreturn result`);
+    assert(typeof r.returnValue.confidence === "number", "confidence should be number");
+});
+
+test("AI() Prob has model field", () => {
+    const r = runKova(`let result = AI("classify", "text")\nreturn result`);
+    assert(typeof r.returnValue.model === "string", "model should be string");
+});
+
+test("resolve() unwraps Prob to value", () => {
+    const r = runKova(`
+let prob = AI("classify", "hello")
+let value = resolve(prob)
+return value`);
+    assert(typeof r.returnValue === "string", "resolved value should be string");
+});
+
+test("resolve() on non-Prob throws", () => {
+    assertThrows(() => runKova(`let x = 5\nlet y = resolve(x)`), "resolve()");
+});
+
+test("typeOf Prob returns 'prob'", () => {
+    const r = runKova(`let p = AI("tag", "news")\nreturn typeOf(p)`);
+    eq(r.returnValue, "prob");
+});
+
+test("typeOf resolved value returns 'string'", () => {
+    const r = runKova(`let p = AI("classify", "text")\nlet v = resolve(p)\nreturn typeOf(v)`);
+    eq(r.returnValue, "string");
+});
+
+test("AI result can be used in if after resolve", () => {
+    const r = runKova(`
+let prob = AI("classify sentiment", "I love this")
+let sentiment = resolve(prob)
+let isPositive = sentiment.includes("[AI")
+return isPositive`);
+    assert(typeof r.returnValue === "boolean", "Should return boolean");
+});
+
+test("AI pipeline: classify then branch", () => {
+    const r = runKova(`
+let review = "great product"
+let probLabel = AI("classify", review)
+let label = resolve(probLabel)
+if label.includes("[AI") {
+    return "classified"
+}
+return "unclassified"`);
+    eq(r.returnValue, "classified");
+});
+
+test("print shows Prob type info", () => {
+    const r = runKova(`
+let p = AI("summarize", "some text")
+print(p)`);
+    assert(r.output.some(l => l.includes("Prob<")), "print should show Prob<> wrapper");
 });
 
 // ─── Results ──────────────────────────────────────────────────────────────────

@@ -124,6 +124,15 @@ export class ExecutionGraph {
         switch (node.type) {
 
             case "VariableDeclaration": {
+                // If the init is an AI() or resolve() call, give it its own node first
+                if (node.init?.type === "CallExpression") {
+                    const callId = this._visitCall(node.init, prevId, node.line);
+                    const label = `let ${node.id.name}`;
+                    const id = this.addNode("declare", label, { varName: node.id.name, line: node.line });
+                    this.addEdge(callId, id, "binding", node.id.name);
+                    this._setProducer(node.id.name, id);
+                    return id;
+                }
                 const label = `let ${node.id.name}`;
                 const id = this.addNode("declare", label, { varName: node.id.name, line: node.line });
                 this.addEdge(prevId, id, "seq");
@@ -332,7 +341,8 @@ export class ExecutionGraph {
 
     _visitCall(node, prevId, line) {
         const fnName = node.callee?.name ?? node.callee?.property ?? "fn";
-        const id = this.addNode("call", `${fnName}(...)`, { fnName, line });
+        const kind = fnName === "AI" ? "ai" : fnName === "resolve" ? "resolve_prob" : "call";
+        const id = this.addNode(kind, `${fnName}(...)`, { fnName, line });
         this.addEdge(prevId, id, "seq");
         node.arguments?.forEach(a => this._dataDeps(a, id));
 
