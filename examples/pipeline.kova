@@ -1,0 +1,25 @@
+// Multi-step AI pipeline with execution graph
+// Run with: kova run examples/pipeline.kova --graph
+
+let article = "Scientists discover new method for carbon capture"
+
+let probCategory  = AI("classify article category", article)
+let probSummary   = AI("summarize in one sentence", article)
+let probSentiment = AI("classify sentiment", article)
+
+let category  = resolve(probCategory)
+let summary   = resolve(probSummary)
+let sentiment = resolve(probSentiment)
+
+print(category)
+print(summary)
+print(sentiment)
+
+respond {
+    status: 200,
+    body: {
+        category:  category,
+        summary:   summary,
+        sentiment: sentiment
+    }
+}
