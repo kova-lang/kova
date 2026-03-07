@@ -1,8 +1,8 @@
 # Kova Programming Language
 
-Kova is a lightweight, expressive programming language designed for AI-integrated backend workflows. It features clean syntax, web-native primitives, and a predictable execution model — with one key addition no general-purpose language provides: **AI uncertainty as a first-class type**.
+Kova is a lightweight, expressive programming language designed for AI-integrated backend workflows. It features clean syntax, web-native primitives, and a predictable execution model , with one key addition no general-purpose language provides: **AI uncertainty as a first-class type**.
 
-As AI systems become more embedded in backend logic, programs need a way to represent what they do not know. Kova introduces `Prob<T>`, a probabilistic type that wraps every AI call result. You cannot use a `Prob<T>` value in a condition or expression until you explicitly call `resolve()` — making uncertainty a structural property of the program, not a runtime surprise.
+As AI systems become more embedded in backend logic, programs need a way to represent what they do not know. Kova introduces `Prob<T>`, a probabilistic type that wraps every AI call result. You cannot use a `Prob<T>` value in a condition or expression until you explicitly call `resolve()` , making uncertainty a structural property of the program, not a runtime surprise.
 
 Kova is a proof-of-concept that deterministic control flow and probabilistic AI calls can coexist with static guarantees, making AI-driven programs easier to audit, debug, and reason about formally.
 
@@ -16,7 +16,7 @@ Kova is engineered for:
 * **Built-in HTTP verbs as keywords** (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`)
 * **Database-like keywords** (`find`, `insert`, `update`, `connect`, `into`, `save`)
 * **First-class AI integration** (`AI()`, `Prob<T>`, `resolve()`)
-* **Execution graph generation** — traces probabilistic value flow through a program
+* **Execution graph generation** , traces probabilistic value flow through a program
 * **Zero-surprise semantics**
 * **Interpreter-based runtime** written in JavaScript (Node.js)
 
@@ -43,7 +43,7 @@ The semantic analyzer will reject any program that attempts to use a `Prob<T>` v
 
 ### 2. Execution Graph
 
-Every Kova program produces an execution graph at runtime — a directed node/edge structure tracing control flow, data dependencies, and where probabilistic values enter and get resolved.
+Every Kova program produces an execution graph at runtime, a directed node/edge structure tracing control flow, data dependencies, and where probabilistic values enter and get resolved.
 
 ```bash
 kova run examples/pipeline.kova --graph
@@ -117,7 +117,7 @@ kova/
 ├── bin/
 │   └── kova.js                  CLI entry point
 ├── src/
-│   ├── index.js                 Public API — runKova(), runKovaSync(), parseKova()
+│   ├── index.js                 Public API , runKova(), runKovaSync(), parseKova()
 │   ├── lexer/
 │   │   └── lexer.js             Tokenizer
 │   ├── parser/
@@ -169,7 +169,7 @@ The Kova lexer recognizes the following token categories:
 
 **AI**
 * `AI`, `resolve` (built-in functions enforced by the semantic analyzer)
-* `Prob<T>` — the probabilistic type produced by every `AI()` call
+* `Prob<T>` , the probabilistic type produced by every `AI()` call
 
 **Response**
 * `respond`
@@ -213,7 +213,7 @@ Every program run produces a directed graph with node kinds: `entry`, `exit`, `d
 
 ## AI Integration (Groq)
 
-Kova uses [Groq](https://console.groq.com) as its AI backend — free tier, no credit card required.
+Kova uses [Groq](https://console.groq.com) as its AI backend , free tier, no credit card required.
 
 ```bash
 echo "GROQ_API_KEY=your_key_here" > .env
@@ -298,7 +298,7 @@ Full spec is in `docs/language-spec.md`. Includes:
 
 Kova started from a single question: if a program calls an AI model, where does uncertainty enter, and how does it flow? Most languages have no structural answer. Kova forces the question into the type system. The execution graph makes the answer visible.
 
-The longer-term interest is in whether symbolic program structures like execution graphs can serve as interpretable scaffolding for probabilistic learning systems — a bridge between structured symbolic computation and adaptive AI models.
+The longer-term interest is in whether symbolic program structures like execution graphs can serve as interpretable scaffolding for probabilistic learning systems , a bridge between structured symbolic computation and adaptive AI models.
 
 ---
 
