@@ -1,122 +1,57 @@
-import Lexer from "./lexer/lexer.js";
-import Parser from "./parser/parser.js";
-import SemanticAnalyzer from "./semantic/semanticAnalyzer.js";
-import Interpreter from "./interpreter/interpreter.js";
-import { buildGraph } from "./graph/executionGraph.js";
-import { defaultExternals, defaultSignatures } from "../lib/functions/index.js";
-import { groqAI, stubAI, isProb, resolveProb, makeProb } from "./ai/groq.js";
+import { stubAI, resolveProb } from "../../src/ai/groq.js";
 
-export { defaultExternals, defaultSignatures };
-export { buildGraph } from "./graph/executionGraph.js";
-export { isProb, resolveProb, makeProb } from "./ai/groq.js";
+export const defaultExternals = {
+    AI:      (task, input, schema = null) => stubAI(task, input, schema),
+    resolve: resolveProb,
+    log: (...args) => { console.log("[kova:log]", ...args); return null; },
+    env: (key) => process.env[key] ?? null,
+    floor: Math.floor, ceil: Math.ceil, round: Math.round,
+    abs: Math.abs, sqrt: Math.sqrt, pow: Math.pow,
+    max: Math.max, min: Math.min, random: Math.random,
+    trim:   (s) => String(s).trim(),
+    upper:  (s) => String(s).toUpperCase(),
+    lower:  (s) => String(s).toLowerCase(),
+    split:  (s, sep) => String(s).split(sep),
+    join:   (arr, sep) => arr.join(sep ?? ","),
+    concat: (...args) => args.join(""),
+    flat:   (arr) => arr.flat(),
+    unique: (arr) => [...new Set(arr)],
+    sort:   (arr) => [...arr].sort(),
+    parseJSON: (s) => JSON.parse(s),
+    toJSON:    (v) => JSON.stringify(v),
+    now:       ()  => Date.now(),
+    isoDate:   ()  => new Date().toISOString(),
+};
 
-// ── AI provider selection ────────────────────────────────────────────────────
-// Pass aiMode: "groq" | "stub" (default: "groq" if key present, else "stub")
-
-function makeAIExternal(aiMode) {
-    return async function AI(task, input, schema = null) {
-        if (aiMode === "stub" || !process.env.GROQ_API_KEY) {
-            return stubAI(task, input, schema);
-        }
-        return groqAI(task, input, schema);
-    };
-}
-
-/**
- * Run a Kova program.
- * Returns { returnValue, respondValue, output, ast, tokens, graph }
- *
- * Options:
- *   externals         — additional external functions
- *   externalSignatures
- *   aiMode            — "groq" | "stub"  (default: auto-detect from env)
- */
-export async function runKova(code, externals = {}, externalSignatures = {}, options = {}) {
-    const aiMode = options.aiMode ?? (process.env.GROQ_API_KEY ? "groq" : "stub");
-
-    const aiExternals = {
-        AI: makeAIExternal(aiMode),
-        resolve: resolveProb,
-    };
-
-    const allExternals  = { ...defaultExternals, ...aiExternals, ...externals };
-    const allSignatures = { ...defaultSignatures, ...externalSignatures };
-
-    try {
-        const lexer  = new Lexer(code);
-        const tokens = lexer.tokenize();
-
-        const parser = new Parser();
-        const ast    = parser.parseProgram(tokens);
-
-        const semantic = new SemanticAnalyzer(code, allExternals, allSignatures);
-        semantic.analyze(ast);
-
-        const interpreter = new Interpreter(allExternals);
-        // Interpreter now supports async externals
-        const result = await interpreter.interpret(ast);
-
-        const { graph, graphInstance } = buildGraph(ast);
-
-        return {
-            ...result,
-            ast,
-            tokens,
-            graph: {
-                ...graph,
-                json:               graphInstance.toJSON(),
-                sourceNodes:        graphInstance.sourceNodes(),
-                topologicalOrder:   graphInstance.topologicalOrder(),
-                parallelCandidates: graphInstance.parallelCandidates(),
-            },
-        };
-
-    } catch (err) {
-        if (err.format) err.formatted = err.format();
-        throw err;
-    }
-}
-
-// Sync convenience wrapper — uses stub AI only, no network
-export function runKovaSync(code, externals = {}, externalSignatures = {}) {
-    const aiExternals = {
-        AI:      (task, input, schema) => stubAI(task, input, schema),
-        resolve: resolveProb,
-    };
-    const allExternals  = { ...defaultExternals, ...aiExternals, ...externals };
-    const allSignatures = { ...defaultSignatures, ...externalSignatures };
-
-    const lexer  = new Lexer(code);
-    const tokens = lexer.tokenize();
-    const parser = new Parser();
-    const ast    = parser.parseProgram(tokens);
-    const semantic = new SemanticAnalyzer(code, allExternals, allSignatures);
-    semantic.analyze(ast);
-    const interpreter = new Interpreter(allExternals);
-    const result = interpreter.interpretSync(ast);
-    const { graph, graphInstance } = buildGraph(ast);
-    return {
-        ...result,
-        ast, tokens,
-        graph: {
-            ...graph,
-            json:               graphInstance.toJSON(),
-            sourceNodes:        graphInstance.sourceNodes(),
-            topologicalOrder:   graphInstance.topologicalOrder(),
-            parallelCandidates: graphInstance.parallelCandidates(),
-        },
-    };
-}
-
-export function parseKova(code) {
-    const lexer  = new Lexer(code);
-    const tokens = lexer.tokenize();
-    const parser = new Parser();
-    const ast    = parser.parseProgram(tokens);
-    const { graph, graphInstance } = buildGraph(ast);
-    return { ast, tokens, graph: { ...graph, json: graphInstance.toJSON() } };
-}
-
-export function tokenizeKova(code) {
-    return new Lexer(code).tokenize();
-}
+export const defaultSignatures = {
+    AI:      { params: ["string", "any"],           returns: "unknown" },
+    resolve: { params: ["prob"],                    returns: "unknown" },
+    log:     { params: ["any"],                     returns: "null"   },
+    env:     { params: ["string"],                  returns: "string" },
+    floor:   { params: ["number"],                  returns: "number" },
+    ceil:    { params: ["number"],                  returns: "number" },
+    round:   { params: ["number"],                  returns: "number" },
+    abs:     { params: ["number"],                  returns: "number" },
+    sqrt:    { params: ["number"],                  returns: "number" },
+    pow:     { params: ["number", "number"],        returns: "number" },
+    max:     { params: ["number", "number"],        returns: "number" },
+    min:     { params: ["number", "number"],        returns: "number" },
+    random:  { params: [],                          returns: "number" },
+    trim:    { params: ["string"],                  returns: "string" },
+    upper:   { params: ["string"],                  returns: "string" },
+    lower:   { params: ["string"],                  returns: "string" },
+    parseJSON: { params: ["string"],                returns: "object" },
+    toJSON:    { params: ["any"],                   returns: "string" },
+    now:       { params: [],                        returns: "number" },
+    isoDate:   { params: [],                        returns: "string" },
+    range:     { params: ["number", "number"],      returns: "array"  },
+    toString:  { params: ["any"],                   returns: "string" },
+    toNumber:  { params: ["any"],                   returns: "number" },
+    typeOf:    { params: ["any"],                   returns: "string" },
+    concat:    { params: ["any", "any"],            returns: "string" },
+    split:     { params: ["string", "string"],      returns: "array"  },
+    join:      { params: ["array", "string"],       returns: "string" },
+    flat:      { params: ["array"],                 returns: "array"  },
+    unique:    { params: ["array"],                 returns: "array"  },
+    sort:      { params: ["array"],                 returns: "array"  },
+};
