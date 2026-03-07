@@ -1,0 +1,12 @@
+// HTTP + AI integration example
+
+GET "https://api.example.com/reviews" into response
+
+let probTag = AI("tag this review as bug, feature, or praise", response)
+let tag = resolve(probTag)
+
+if tag == "bug" {
+    POST "https://api.example.com/issues" save { tag: tag, source: response }
+}
+
+respond { status: 200, body: { tagged: tag } }
