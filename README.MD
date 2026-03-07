@@ -316,5 +316,5 @@ Pull requests are welcome. Open an issue for feature requests or bug reports.
 
 ## Author
 
-Samuel Oguntimehin Ifeda
+Samuel Oguntimehin Ifedapo
 [github.com/Cybugg](https://github.com/Cybugg) · [linkedin.com/in/samuel-oguntimehin-1636331b3](https://www.linkedin.com/in/samuel-oguntimehin-1636331b3/)
