@@ -13,33 +13,31 @@
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
-// ── Prob<T> type ──────────────────────────────────────────────────────────────
-
-export function makeProb(value, meta = {}) {
+// #### Prob<T> type ####
+export const makeProb = (value, meta = {}) => {
     return {
-        __prob__:    true,
+        __prob__: true,
         value,
-        confidence:  meta.confidence  ?? 1.0,
-        model:       meta.model       ?? "unknown",
-        task:        meta.task        ?? "",
-        tokens:      meta.tokens      ?? 0,
-        resolved:    false,
+        confidence: meta.confidence ?? 1.0,
+        model: meta.model ?? "unknown",
+        task: meta.task ?? "",
+        tokens: meta.tokens ?? 0,
+        resolved: false,
     };
 }
 
-export function isProb(v) {
+export const isProb = (v) => {
     return v !== null && typeof v === "object" && v.__prob__ === true;
 }
 
-export function resolveProb(v) {
+export const resolveProb = (v) => {
     if (!isProb(v)) throw new Error("resolve() expects a Prob<T> value, got: " + typeof v);
     v.resolved = true;
     return v.value;
 }
 
-// ── Groq client ───────────────────────────────────────────────────────────────
-
-export async function groqAI(task, input, schema = null, apiKey = null) {
+// #### Groq client ####
+export const groqAI = async (task, input, schema = null, apiKey = null) => {
     const key = apiKey ?? process.env.GROQ_API_KEY;
     if (!key) throw new Error("GROQ_API_KEY not set. Add it to your .env or pass via ENV.GROQ_API_KEY");
 
@@ -51,19 +49,19 @@ export async function groqAI(task, input, schema = null, apiKey = null) {
     const userPrompt = `Task: ${task}\nInput: ${typeof input === "object" ? JSON.stringify(input) : String(input)}`;
 
     const body = {
-        model:       DEFAULT_MODEL,
-        max_tokens:  512,
+        model: DEFAULT_MODEL,
+        max_tokens: 512,
         temperature: 0.2,
         messages: [
-            { role: "system",  content: systemPrompt },
-            { role: "user",    content: userPrompt   },
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
         ],
     };
 
     const res = await fetch(GROQ_API_URL, {
-        method:  "POST",
+        method: "POST",
         headers: {
-            "Content-Type":  "application/json",
+            "Content-Type": "application/json",
             "Authorization": `Bearer ${key}`,
         },
         body: JSON.stringify(body),
@@ -75,9 +73,9 @@ export async function groqAI(task, input, schema = null, apiKey = null) {
     }
 
     const data = await res.json();
-    const raw  = data.choices?.[0]?.message?.content ?? "";
+    const raw = data.choices?.[0]?.message?.content ?? "";
     const tokens = data.usage?.total_tokens ?? 0;
-    const model  = data.model ?? DEFAULT_MODEL;
+    const model = data.model ?? DEFAULT_MODEL;
 
     // Parse JSON if schema was requested
     let value;
@@ -94,9 +92,8 @@ export async function groqAI(task, input, schema = null, apiKey = null) {
     return makeProb(value, { confidence: 0.9, model, task, tokens });
 }
 
-// ── Stub for offline / test mode ──────────────────────────────────────────────
-
-export function stubAI(task, input, schema = null) {
+// #### Stub for offline / test mode ####
+export const stubAI = (task, input, schema = null) => {
     const value = schema
         ? Object.fromEntries(Object.keys(schema).map(k => [k, `[stub:${k}]`]))
         : `[AI stub: ${task}]`;
