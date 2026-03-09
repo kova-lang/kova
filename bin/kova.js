@@ -7,6 +7,7 @@
  *   kova run <file.kova> --graph —> run and print execution graph summary
  *   kova check <file.kova>       —> parse and type-check only
  */
+import 'dotenv/config';
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
