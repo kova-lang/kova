@@ -59,7 +59,7 @@ export class ExecutionGraph {
         }
     }
 
-    // ─── Variable tracking ────────────────────────────────────────────────────
+    // #### Variable tracking ####
 
     _setProducer(name, nodeId) { this._varProducers.set(name, nodeId); }
 
@@ -95,7 +95,7 @@ export class ExecutionGraph {
         });
     }
 
-    // ─── Build ────────────────────────────────────────────────────────────────
+    // #### Build ####
 
     build(ast) {
         const entryId = this.addNode("entry", "START", {});
@@ -366,7 +366,7 @@ export class ExecutionGraph {
         }
     }
 
-    // ─── Serialise to plain JSON (for visualizer / external tools) ────────────
+    // #### Serialise to plain JSON (for visualizer / external tools) ####
 
     toJSON() {
         return {
@@ -375,7 +375,7 @@ export class ExecutionGraph {
         };
     }
 
-    // ─── Analysis helpers (useful for research presentation) ──────────────────
+    // #### Analysis helpers (useful for research presentation) ####
 
     /**
      * Returns nodes that have no incoming data edges — "root" producers.
