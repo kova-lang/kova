@@ -7,7 +7,7 @@
 // Run: kova run examples/user-onboarding.kova --graph
 
 let user = {
-    name:      "Alice Nwachukwu",
+    name:      "Samuel Oguntimehin",
     email:     "alice@example.com",
     bio:       "I am a software engineer passionate about distributed systems and open source.",
     interests: "databases, distributed systems, Rust, open source, performance engineering"
