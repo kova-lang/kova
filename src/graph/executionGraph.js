@@ -42,7 +42,7 @@ export class ExecutionGraph {
         this._fnNodes = new Map();      // fnName → nodeId
     }
 
-    // ─── Node / Edge factories ────────────────────────────────────────────────
+    // #### Node / Edge factories ####
 
     _id() { return `n${++this._counter}`; }
 
@@ -65,7 +65,7 @@ export class ExecutionGraph {
 
     _getProducer(name) { return this._varProducers.get(name) ?? null; }
 
-    // Collect all identifier names referenced in an AST node (shallow)
+    // #### Collect all identifier names referenced in an AST node (shallow) ####
     _refsIn(node) {
         const names = new Set();
         const walk = (n) => {

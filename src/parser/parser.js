@@ -44,36 +44,36 @@ export default class Parser {
         return { type: "Program", body };
     }
 
-    // ─── Statements ──────────────────────────────────────────────────────────
+    // #### Statements ####
 
     parseStatement() {
         while (this.currentToken.type === "SEMICOLON") this.advance();
 
         switch (this.currentToken.type) {
-            case "LET":        return this.parseVariableDeclaration();
-            case "FN":         return this.parseFunctionDeclaration();
-            case "IF":         return this.parseIfStatement();
-            case "WHILE":      return this.parseWhileStatement();
-            case "FOR":        return this.parseForStatement();
-            case "RETURN":     return this.parseReturnStatement();
-            case "RESPOND":    return this.parseRespondStatement();
-            case "IMPORT":     return this.parseImportStatement();
-            case "EXPORT":     return this.parseExportStatement();
-            case "CONNECT":    return this.parseConnectStatement();
-            case "FIND":       return this.parseFindStatement();
-            case "INSERT":     return this.parseInsertStatement();
-            case "UPDATE":     return this.parseUpdateStatement();
+            case "LET": return this.parseVariableDeclaration();
+            case "FN": return this.parseFunctionDeclaration();
+            case "IF": return this.parseIfStatement();
+            case "WHILE": return this.parseWhileStatement();
+            case "FOR": return this.parseForStatement();
+            case "RETURN": return this.parseReturnStatement();
+            case "RESPOND": return this.parseRespondStatement();
+            case "IMPORT": return this.parseImportStatement();
+            case "EXPORT": return this.parseExportStatement();
+            case "CONNECT": return this.parseConnectStatement();
+            case "FIND": return this.parseFindStatement();
+            case "INSERT": return this.parseInsertStatement();
+            case "UPDATE": return this.parseUpdateStatement();
             case "POST_HTTP":
             case "GET_HTTP":
             case "PUT_HTTP":
             case "PATCH_HTTP":
             case "DELETE_HTTP": return this.parseHttpStatement();
-            case "LBRACE":     return this.parseBlock();
-            default:           return this.parseExpressionStatement();
+            case "LBRACE": return this.parseBlock();
+            default: return this.parseExpressionStatement();
         }
     }
 
-    // ─── Variable / Function declarations ────────────────────────────────────
+    // #### Variable / Function declarations ####
 
     parseVariableDeclaration() {
         const letToken = this.currentToken;
@@ -160,7 +160,7 @@ export default class Parser {
         };
     }
 
-    // ─── Control flow ─────────────────────────────────────────────────────────
+    // #### Control flow ####
 
     parseIfStatement() {
         const ifToken = this.currentToken;
@@ -203,7 +203,7 @@ export default class Parser {
         };
     }
 
-    // ─── HTTP statements ──────────────────────────────────────────────────────
+    // #### HTTP statements ####
     //
     //  GET  "url"                          → plain request, result discarded
     //  GET  "url"  into result             → bind response to let 'result'
@@ -255,7 +255,7 @@ export default class Parser {
         };
     }
 
-    // ─── respond statement ────────────────────────────────────────────────────
+    // #### respond statement ####
     //
     //  respond { status: 200, body: data }
     //  respond data                         → shorthand, body only
@@ -267,7 +267,7 @@ export default class Parser {
         return { type: "RespondStatement", value, line: tok.line, column: tok.column };
     }
 
-    // ─── CONNECT statement ────────────────────────────────────────────────────
+    // #### CONNECT statement ####
     //
     //  connect mysql using {
     //      host: ENV.DB_HOST,
@@ -308,7 +308,7 @@ export default class Parser {
         };
     }
 
-    // ─── DB query statements ──────────────────────────────────────────────────
+    // #### DB query statements ####
     //
     //  find users where { active: true } limit 10 order_by createdAt desc  into results
     //  insert into users { name: "Alice", email: "alice@x.com" }           into newDoc
@@ -437,7 +437,7 @@ export default class Parser {
         };
     }
 
-    // ─── Import / Export ──────────────────────────────────────────────────────
+    // #### Import / Export ####
     //
     //  import { handler, util } from "./routes/users"
     //  import logger from "./lib/logger"    (default import)
@@ -486,7 +486,7 @@ export default class Parser {
         return { type: "ExportStatement", declaration, line: tok.line, column: tok.column };
     }
 
-    // ─── Return / Respond ─────────────────────────────────────────────────────
+    // #### Return / Respond ####
 
     parseReturnStatement() {
         const tok = this.currentToken;
@@ -501,7 +501,7 @@ export default class Parser {
         return { type: "ExpressionStatement", expression, line: tok.line, column: tok.column };
     }
 
-    // ─── Block ────────────────────────────────────────────────────────────────
+    // #### Block ####
 
     parseBlock() {
         const brace = this.currentToken;
@@ -514,7 +514,7 @@ export default class Parser {
         return { type: "BlockStatement", body, line: brace.line, column: brace.column };
     }
 
-    // ─── Expression precedence chain ─────────────────────────────────────────
+    // #### Expression precedence chain ####
 
     parseExpression() {
         // HTTP verbs used as expressions: let res = GET "url"
@@ -685,10 +685,10 @@ export default class Parser {
     parsePrimary() {
         const token = this.currentToken;
 
-        if (token.type === "NUMBER")  { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
-        if (token.type === "STRING")  { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
+        if (token.type === "NUMBER") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
+        if (token.type === "STRING") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
         if (token.type === "BOOLEAN") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
-        if (token.type === "NULL")    { this.advance(); return { type: "Literal", value: null,        line: token.line, column: token.column }; }
+        if (token.type === "NULL") { this.advance(); return { type: "Literal", value: null, line: token.line, column: token.column }; }
 
         // ENV  →  treated as a special identifier that resolves to process.env
         if (token.type === "ENV") {
@@ -705,15 +705,15 @@ export default class Parser {
         // keywords like `update`, `limit`, `set`, `find`, `insert`, `where`, `respond`
         // are valid variable names. Treat them as identifiers here.
         const CONTEXTUAL_KW_TYPES = new Set([
-            "UPDATE","FIND","INSERT","SET","LIMIT","WHERE","ORDER_BY",
-            "ASC","DESC","RESPOND","CONNECT","USING","SAVE","INTO","FROM"
+            "UPDATE", "FIND", "INSERT", "SET", "LIMIT", "WHERE", "ORDER_BY",
+            "ASC", "DESC", "RESPOND", "CONNECT", "USING", "SAVE", "INTO", "FROM"
         ]);
         if (CONTEXTUAL_KW_TYPES.has(token.type)) {
             this.advance();
             return { type: "Identifier", name: token.value, line: token.line, column: token.column };
         }
         if (token.type === "LBRACKET") return this.parseArrayExpression();
-        if (token.type === "LBRACE")   return this.parseObjectExpression();
+        if (token.type === "LBRACE") return this.parseObjectExpression();
 
         if (token.type === "LPAREN") {
             if (this.isArrowFunction()) return this.parseArrowFunction();
