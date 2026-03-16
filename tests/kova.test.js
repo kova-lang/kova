@@ -18,7 +18,7 @@ function assertThrows(fn, fragment) {
 }
 function eq(a, b) { assert(a === b, `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); }
 
-// ─── Variable Declaration ────────────────────────────────────────────────────
+// #### Variable Declaration ####
 console.log("\n Variable Declaration");
 test("number",           () => eq(runKova(`let x = 5  return x`).returnValue, 5));
 test("string",           () => eq(runKova(`let x = "hi"  return x`).returnValue, "hi"));
@@ -29,7 +29,7 @@ test("expression init",  () => eq(runKova(`let x = 5  let y = x + 2  return y`).
 test("undeclared throws",     () => assertThrows(() => runKova(`let y = x`), "Undeclar"));
 test("duplicate throws",      () => assertThrows(() => runKova(`let x = 1  let x = 2`), "already declared"));
 
-// ─── Arithmetic ──────────────────────────────────────────────────────────────
+// #### Arithmetic ####
 console.log("\n Arithmetic");
 test("add",         () => eq(runKova(`return 3 + 4`).returnValue, 7));
 test("sub",         () => eq(runKova(`return 10 - 3`).returnValue, 7));
@@ -43,7 +43,7 @@ test("unary neg",   () => eq(runKova(`return -5`).returnValue, -5));
 test("string concat", () => eq(runKova(`return "hello" + " world"`).returnValue, "hello world"));
 test("div by zero throws", () => assertThrows(() => runKova(`return 10 / 0`), "Division by zero"));
 
-// ─── Comparison / Logical ─────────────────────────────────────────────────────
+// #### Comparison / Logical ####
 console.log("\n Comparison & Logical");
 test("gt",     () => eq(runKova(`return 5 > 3`).returnValue, true));
 test("lt",     () => eq(runKova(`return 2 < 3`).returnValue, true));
@@ -54,19 +54,19 @@ test("AND",    () => eq(runKova(`return true && true`).returnValue, true));
 test("OR",     () => eq(runKova(`return false || true`).returnValue, true));
 test("NOT",    () => eq(runKova(`return !true`).returnValue, false));
 
-// ─── While / For ─────────────────────────────────────────────────────────────
+// #### While / For ####
 console.log("\n Loops");
 test("while sum", () => eq(runKova(`let i = 0\nlet s = 0\nwhile i < 5 { s = s + i\n i = i + 1 }\nreturn s`).returnValue, 10));
 test("for sum",   () => eq(runKova(`let arr = [1,2,3,4,5]\nlet s = 0\nfor x in arr { s = s + x }\nreturn s`).returnValue, 15));
 test("for range", () => eq(runKova(`let s = 0\nfor x in range(0,5) { s += x }\nreturn s`).returnValue, 10));
 
-// ─── Functions ───────────────────────────────────────────────────────────────
+// #### Functions ####
 console.log("\n Functions");
 test("basic fn",    () => eq(runKova(`fn add(a, b) { return a + b }\nreturn add(3, 4)`).returnValue, 7));
 test("recursion",   () => eq(runKova(`fn fact(n) { if n <= 1 { return 1 }\nreturn n * fact(n - 1) }\nreturn fact(5)`).returnValue, 120));
 test("closure",     () => eq(runKova(`let base = 10\nfn add(x) { return x + base }\nreturn add(5)`).returnValue, 15));
 
-// ─── Arrays / Objects ────────────────────────────────────────────────────────
+// #### Arrays / Objects ####
 console.log("\n Arrays & Objects");
 test("array literal",  () => { const r = runKova(`let a = [1,2,3]  return a`); eq(r.returnValue[1], 2); });
 test("array index",    () => eq(runKova(`let a = [10,20,30]  return a[1]`).returnValue, 20));
@@ -77,7 +77,7 @@ test("nested object",  () => eq(runKova(`let o = { inner: { val: 7 } }  return o
 test("compound +=",    () => eq(runKova(`let x = 5\nx += 3\nreturn x`).returnValue, 8));
 test("member +=",      () => eq(runKova(`let o = { x: 5 }\no.x += 10\nreturn o.x`).returnValue, 15));
 
-// ─── HTTP – basic ─────────────────────────────────────────────────────────────
+// #### HTTP – basic ####
 console.log("\n HTTP – Basic");
 test("GET output",    () => assert(runKova(`GET "https://api.example.com"`).output.some(l => l.includes("GET"))));
 test("POST output",   () => assert(runKova(`POST "https://api.example.com"`).output.some(l => l.includes("POST"))));
@@ -85,7 +85,7 @@ test("PUT output",    () => assert(runKova(`PUT "https://api.example.com"`).outp
 test("DELETE output", () => assert(runKova(`DELETE "https://api.example.com"`).output.some(l => l.includes("DELETE"))));
 test("PATCH output",  () => assert(runKova(`PATCH "https://api.example.com"`).output.some(l => l.includes("PATCH"))));
 
-// ─── HTTP – into binding ──────────────────────────────────────────────────────
+// #### HTTP – into binding ####
 console.log("\n HTTP – 'into' binding");
 test("GET into result", () => {
     const r = runKova(`GET "https://api.example.com/users" into users\nreturn users.ok`);
@@ -100,7 +100,7 @@ test("let res = GET ...", () => {
     eq(r.returnValue, true);
 });
 
-// ─── HTTP – save body ─────────────────────────────────────────────────────────
+// #### HTTP – save body ####
 console.log("\n HTTP – 'save' body");
 test("POST save body", () => {
     const r = runKova(`
@@ -124,7 +124,7 @@ return res.status`);
     eq(r.returnValue, 200);
 });
 
-// ─── CONNECT ─────────────────────────────────────────────────────────────────
+// #### CONNECT ####
 console.log("\n CONNECT");
 test("connect mysql using object", () => {
     const r = runKova(`
@@ -149,7 +149,7 @@ return mysql.connected`);
     eq(r.returnValue, true);
 });
 
-// ─── ENV ─────────────────────────────────────────────────────────────────────
+// #### ENV ####
 console.log("\n ENV");
 test("ENV.NODE_ENV access", () => {
     process.env.NODE_ENV = "test";
@@ -166,7 +166,7 @@ test("ENV member in object literal", () => {
     eq(r.returnValue, "hello");
 });
 
-// ─── FIND / INSERT / UPDATE ───────────────────────────────────────────────────
+// #### FIND / INSERT / UPDATE ####
 console.log("\n DB Queries");
 test("find with where + into", () => {
     const r = runKova(`
@@ -211,7 +211,7 @@ update orders set { status: "shipped" } where { id: 99 }`);
     assert(r.output.some(l => l.includes("[DB]") && l.includes("update")));
 });
 
-// ─── RESPOND ─────────────────────────────────────────────────────────────────
+// #### RESPOND ####
 console.log("\n RESPOND");
 test("respond with object", () => {
     const r = runKova(`respond { status: 200, body: "OK" }`);
@@ -229,7 +229,7 @@ test("respond shorthand value", () => {
     eq(r.respondValue.body, "hello");
 });
 
-// ─── IMPORT ───────────────────────────────────────────────────────────────────
+// #### IMPORT ####
 console.log("\n IMPORT");
 test("named import parsed", () => {
     const r = runKova(`import { handler, util } from "./routes/users"
@@ -242,7 +242,7 @@ return true`);
     eq(r.returnValue, true);
 });
 
-// ─── Real-world backend snippet ───────────────────────────────────────────────
+// #### Real-world backend snippet ####
 console.log("\n Real-world Backend Snippets");
 
 test("full user creation flow", () => {
@@ -289,14 +289,14 @@ return updateRes.modifiedCount`);
     eq(r.returnValue, 1);
 });
 
-// ─── Comments ─────────────────────────────────────────────────────────────────
+// #### Comments ####
 console.log("\n Comments");
 test("// comment",  () => eq(runKova(`// comment\nlet x = 5\nreturn x`).returnValue, 5));
 test("# comment",   () => eq(runKova(`# comment\nlet x = 10\nreturn x`).returnValue, 10));
 test("/* block */", () => eq(runKova(`/* block */\nlet x = 7\nreturn x`).returnValue, 7));
 
 
-// ─── AI Integration ──────────────────────────────────────────────────────────
+// #### AI Integration ####
 console.log("\n AI Integration (Prob<T>)");
 
 test("AI() returns a Prob value", () => {
@@ -371,14 +371,14 @@ print(p)`);
     assert(r.output.some(l => l.includes("Prob<")), "print should show Prob<> wrapper");
 });
 
-// ─── Results ──────────────────────────────────────────────────────────────────
-console.log(`\n${"─".repeat(56)}`);
+// #### Results ####
+console.log(`\n${"####".repeat(56)}`);
 const total = passed + failed;
 console.log(`  ${passed} passed, ${failed} failed out of ${total} tests (${((passed/total)*100).toFixed(1)}%)`);
-console.log(`${"─".repeat(56)}\n`);
+console.log(`${"####".repeat(56)}\n`);
 if (failed > 0) process.exit(1);
 
-// ─── Execution Graph ──────────────────────────────────────────────────────────
+// #### Execution Graph ####
 console.log("\n Execution Graph");
 
 test("graph is returned from runKova", () => {
@@ -507,7 +507,7 @@ respond { status: 200, body: users }`);
 });
 
 
-// ─── AI Integration ──────────────────────────────────────────────────────────
+// #### AI Integration ####
 console.log("\n AI Integration (Prob<T>)");
 
 test("AI() returns a Prob value", () => {
@@ -582,9 +582,9 @@ print(p)`);
     assert(r.output.some(l => l.includes("Prob<")), "print should show Prob<> wrapper");
 });
 
-// ─── Results ──────────────────────────────────────────────────────────────────
-console.log(`\n${"─".repeat(56)}`);
+// #### Results ####
+console.log(`\n${"####".repeat(56)}`);
 const total2 = passed + failed;
 console.log(`  ${passed} passed, ${failed} failed out of ${total2} tests (${((passed/total2)*100).toFixed(1)}%)`);
-console.log(`${"─".repeat(56)}\n`);
+console.log(`${"####".repeat(56)}\n`);
 if (failed > 0) process.exit(1);

@@ -10,12 +10,12 @@ export default class SemanticAnalyzer {
         this.functions = {};
     }
 
-    // ─── Prob helpers ─────────────────────────────────────────────────────────
+    // #### Prob helpers ####
     Prob(inner) { return { kind: "prob", inner }; }
     isProb(t)   { return t && typeof t === "object" && t.kind === "prob"; }
     unwrapProb(t) { return t.inner; }
 
-    // ─── Scope helpers ────────────────────────────────────────────────────────
+    // #### Scope helpers ####
     enterScope() { this.scopes.push(new Map()); }
     exitScope()  { this.scopes.pop(); }
 
@@ -186,7 +186,7 @@ export default class SemanticAnalyzer {
 
             case "ExpressionStatement":  return this.visit(node.expression);
 
-            // ── HTTP ──────────────────────────────────────────────────────────
+            // #### HTTP ####
             case "HttpStatement": {
                 this.visit(node.url);
                 if (node.body)    this.visit(node.body);
@@ -205,12 +205,12 @@ export default class SemanticAnalyzer {
                 return "object";
             }
 
-            // ── respond ───────────────────────────────────────────────────────
+            // #### respond ####
             case "RespondStatement":
                 this.visit(node.value);
                 return null;
 
-            // ── DB ────────────────────────────────────────────────────────────
+            // #### DB ####
             case "ConnectStatement":
                 this.visit(node.config);
                 if (node.binding) {
@@ -243,7 +243,7 @@ export default class SemanticAnalyzer {
                 }
                 return "object";
 
-            // ── Imports ───────────────────────────────────────────────────────
+            // #### Imports ####
             case "ImportStatement":
                 node.specifiers.forEach(spec => { try { this.declare(spec, "unknown"); } catch (_) {} });
                 if (node.defaultImport) { try { this.declare(node.defaultImport, "unknown"); } catch (_) {} }
@@ -251,7 +251,7 @@ export default class SemanticAnalyzer {
 
             case "ExportStatement":  return this.visit(node.declaration);
 
-            // ── Functions ─────────────────────────────────────────────────────
+            // #### Functions ####
             case "CallExpression": {
                 if (node.callee.type === "MemberExpression") {
                     node.arguments.forEach(a => this.visit(a));

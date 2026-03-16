@@ -56,7 +56,7 @@ export default class Interpreter {
         });
     }
 
-    // ─── Async interpret (supports AI() calls) ───────────────────────────────
+    // #### Async interpret (supports AI() calls) ####
 
     async interpret(ast) {
         this.returnValue = undefined;
@@ -89,7 +89,7 @@ export default class Interpreter {
         };
     }
 
-    // ─── Scope management ────────────────────────────────────────────────────
+    // #### Scope management ####
 
     enterScope() { this.scopes.push(new Map()); }
     exitScope()  { this.scopes.pop(); }
@@ -110,7 +110,7 @@ export default class Interpreter {
         throw new RuntimeError(`Cannot assign to undeclared variable "${name}"`);
     }
 
-    // ─── Async visitor ───────────────────────────────────────────────────────
+    // #### Async visitor ####
 
     async visit(node) {
         if (this.shouldReturn) return undefined;
@@ -257,7 +257,7 @@ export default class Interpreter {
         }
     }
 
-    // ─── Sync visitor (for interpretSync / no-AI path) ───────────────────────
+    // #### Sync visitor (for interpretSync / no-AI path) ####
 
     _visitSync(node) {
         if (this.shouldReturn || !node) return undefined;
@@ -308,7 +308,7 @@ export default class Interpreter {
         }
     }
 
-    // ─── HTTP ────────────────────────────────────────────────────────────────
+    // #### HTTP ####
 
     async executeHttp(node) {
         const url    = await this.visit(node.url);
@@ -331,7 +331,7 @@ export default class Interpreter {
         return response;
     }
 
-    // ─── DB ──────────────────────────────────────────────────────────────────
+    // #### DB ####
 
     async executeConnect(node) {
         const config = await this.visit(node.config);
@@ -402,7 +402,7 @@ export default class Interpreter {
         return result;
     }
 
-    // ─── Function calls (async) ──────────────────────────────────────────────
+    // #### Function calls (async) ####
 
     async executeCall(node) {
         if (node.callee.type === "MemberExpression") return await this.executeMemberCall(node);
@@ -542,13 +542,13 @@ export default class Interpreter {
         throw new RuntimeError("Expected a callable function");
     }
 
-    // ─── Helper: bind to existing var or declare new ─────────────────────────
+    // #### Helper: bind to existing var or declare new ####
 
     _bindOrDeclare(name, value) {
         try { this.assign(name, value); } catch (_) { this.declare(name, value); }
     }
 
-    // ─── Evaluation ──────────────────────────────────────────────────────────
+    // #### Evaluation ####
 
     evaluateBinary(node, left, right) {
         switch (node.operator) {
