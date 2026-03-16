@@ -3,11 +3,11 @@
 
 let review = "The product quality is outstanding!"
 
-let probSentiment = AI("classify sentiment as positive, negative, or neutral", review)
+let probSentiment = AI("classify sentiment, respond with only lowercase: positive, negative, or neutral", review);
+
 let sentiment = resolve(probSentiment)
 
 if sentiment == "positive" {
     respond { status: 200, body: { approved: true, sentiment: sentiment } }
 }
-
-respond { status: 200, body: { approved: false, sentiment: sentiment } }
+else{respond { status: 200, body: { approved: false, sentiment: sentiment } }}
