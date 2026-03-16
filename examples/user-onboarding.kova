@@ -1,0 +1,54 @@
+// User Onboarding Flow
+// Validates a new user profile with AI-assisted checks:
+// name validation, bio quality check, and interest classification.
+// Then stores the user and responds based on profile completeness.
+// Demonstrates AI + DB + HTTP in a single workflow.
+//
+// Run: kova run examples/user-onboarding.kova --graph
+
+let user = {
+    name:      "Alice Nwachukwu",
+    email:     "alice@example.com",
+    bio:       "I am a software engineer passionate about distributed systems and open source.",
+    interests: "databases, distributed systems, Rust, open source, performance engineering"
+}
+
+let probNameCheck   = AI("is this a real human name? respond with only: yes or no",                          user.name)
+let probBioQuality  = AI("rate this bio quality as: poor, acceptable, or good. respond with one word only", user.bio)
+let probCategory    = AI("classify this user as: developer, designer, manager, or researcher. one word",    user.interests)
+
+let nameValid   = resolve(probNameCheck)
+let bioQuality  = resolve(probBioQuality)
+let category    = resolve(probCategory)
+
+print("Name valid:   " + nameValid)
+print("Bio quality:  " + bioQuality)
+print("User type:    " + category)
+
+if nameValid == "no" {
+    respond {
+        status: 400,
+        body: { error: "invalid name", field: "name" }
+    }
+}
+
+insert into users {
+    name:      user.name,
+    email:     user.email,
+    bio:       user.bio,
+    category:  category,
+    bioScore:  bioQuality,
+    verified:  false
+} into newUser
+
+print("Inserted user id: " + newUser.insertedId)
+
+respond {
+    status: 201,
+    body: {
+        id:          newUser.insertedId,
+        category:    category,
+        bioQuality:  bioQuality,
+        onboarded:   true
+    }
+}

@@ -1,0 +1,53 @@
+// Content Moderation Pipeline
+// Screens user-submitted content across three dimensions:
+// toxicity, spam likelihood, and topic classification.
+// Each AI call is independent — the execution graph will
+// identify all three as parallel candidates.
+//
+// Run: kova run examples/content-moderation.kova --graph
+
+let content = "Buy cheap followers now! Click this link to get 10,000 followers for just $5. Limited time offer!!!"
+
+let probToxic    = AI("classify as toxic or safe. respond with only: toxic or safe", content)
+let probSpam     = AI("classify as spam or legitimate. respond with only: spam or legitimate", content)
+let probTopic    = AI("classify topic in one word, lowercase", content)
+
+let toxic  = resolve(probToxic)
+let spam   = resolve(probSpam)
+let topic  = resolve(probTopic)
+
+print("Toxicity:  " + toxic)
+print("Spam:      " + spam)
+print("Topic:     " + topic)
+
+if toxic == "toxic" {
+    respond {
+        status: 403,
+        body: {
+            action:  "blocked",
+            reason:  "toxic content",
+            topic:   topic
+        }
+    }
+}
+
+if spam == "spam" {
+    respond {
+        status: 403,
+        body: {
+            action:  "blocked",
+            reason:  "spam detected",
+            topic:   topic
+        }
+    }
+}
+
+respond {
+    status: 200,
+    body: {
+        action:  "approved",
+        topic:   topic,
+        toxic:   toxic,
+        spam:    spam
+    }
+}

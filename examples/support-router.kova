@@ -1,0 +1,42 @@
+// Support Ticket Router
+// Classifies an incoming support message by urgency, department,
+// and sentiment, then routes it to the correct queue.
+// Demonstrates chained AI decisions feeding into routing logic.
+//
+// Run: kova run examples/support-router.kova --graph
+
+let ticket = "I have been charged twice for my subscription this month and cannot reach anyone. This is completely unacceptable. I want a refund immediately."
+
+let probUrgency    = AI("classify urgency as: low, medium, high, or critical. respond with one word only", ticket)
+let probDepartment = AI("classify department as: billing, technical, sales, or general. respond with one word only", ticket)
+let probSentiment  = AI("classify customer sentiment as: calm, frustrated, or angry. respond with one word only", ticket)
+
+let urgency    = resolve(probUrgency)
+let department = resolve(probDepartment)
+let sentiment  = resolve(probSentiment)
+
+print("Urgency:    " + urgency)
+print("Department: " + department)
+print("Sentiment:  " + sentiment)
+
+let queue   = department + "-" + urgency
+let escalate = false
+
+if sentiment == "angry" {
+    escalate = true
+}
+
+if urgency == "critical" {
+    escalate = true
+}
+
+respond {
+    status: 200,
+    body: {
+        queue:      queue,
+        escalate:   escalate,
+        urgency:    urgency,
+        department: department,
+        sentiment:  sentiment
+    }
+}
