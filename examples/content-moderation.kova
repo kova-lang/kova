@@ -8,8 +8,8 @@
 
 let content = "Buy cheap followers now! Click this link to get 10,000 followers for just $5. Limited time offer!!!"
 
-let probToxic    = AI("classify as toxic or safe. respond with only: toxic or safe", content)
-let probSpam     = AI("classify as spam or legitimate. respond with only: spam or legitimate", content)
+let probToxic    = AI("classify as toxic or safe. respond with only: toxic or safe. Response in lowercase.", content)
+let probSpam     = AI("classify as spam or legitimate. respond with only: spam or legitimate. Response in lowercase.", content)
 let probTopic    = AI("classify topic in one word, lowercase", content)
 
 let toxic  = resolve(probToxic)
