@@ -1,0 +1,6 @@
+let name = "samuel"
+fn greet(){
+    return "hello"+" "+name
+}
+
+print(greet());
