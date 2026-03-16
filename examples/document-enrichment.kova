@@ -1,0 +1,38 @@
+// Document Enrichment Pipeline
+// Takes a raw document and enriches it with AI-generated metadata:
+// title, summary, language, key topics, and a readability score.
+// Shows how Prob<T> keeps each enrichment step explicit and auditable.
+//
+// Run: kova run examples/document-enrichment.kova
+
+let document = "The mitochondria are membrane-bound organelles found in the cytoplasm of eukaryotic cells. They generate most of the cell's supply of adenosine triphosphate (ATP), which is used as a source of chemical energy. In addition to supplying cellular energy, mitochondria are involved in other tasks, including signalling, cellular differentiation, and cell death."
+
+let probTitle      = AI("generate a short document title, 5 words max",                     document)
+let probSummary    = AI("summarize in one sentence",                                         document)
+let probLanguage   = AI("detect language, respond with language name only",                  document)
+let probTopics     = AI("list 3 key topics separated by commas, no spaces after commas",     document)
+let probReadability = AI("rate readability as: basic, intermediate, or advanced. one word",  document)
+
+let title       = resolve(probTitle)
+let summary     = resolve(probSummary)
+let language    = resolve(probLanguage)
+let topics      = resolve(probTopics)
+let readability = resolve(probReadability)
+
+print("Title:       " + title)
+print("Summary:     " + summary)
+print("Language:    " + language)
+print("Topics:      " + topics)
+print("Readability: " + readability)
+
+respond {
+    status: 200,
+    body: {
+        title:       title,
+        summary:     summary,
+        language:    language,
+        topics:      topics,
+        readability: readability,
+        wordCount:   42
+    }
+}

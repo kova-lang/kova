@@ -1,5 +1,5 @@
 /**
- * Kova AI Layer — Groq backend
+ * Kova AI Layer : Groq backend
  *
  * AI(task, input)         → Prob<T>  (async, settles on call)
  * AI(task, input, schema) → Prob<T>  (structured JSON output)

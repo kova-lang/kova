@@ -1,0 +1,56 @@
+// Health Check Service
+// Fetches system status from an external API, uses AI to interpret
+// the response in plain language, checks a database for recent incidents,
+// and responds with a unified health report.
+// The most complete example — HTTP + DB + AI + conditional logic.
+//
+// Run: kova run examples/health-check-service.kova --graph
+
+connect postgres using {
+    host:     "localhost",
+    database: "monitoring"
+}
+
+GET "https://api.example.com/system/status" into systemStatus
+
+let statusText = "System API responded with status " + systemStatus.status
+
+let probHealth      = AI("interpret this system status as: healthy, degraded, or down. one word only",         statusText)
+let probRecommend   = AI("given this system status, recommend action in one sentence",                         statusText)
+
+let health    = resolve(probHealth)
+let recommend = resolve(probRecommend)
+
+find incidents where { resolved: false } limit 5 into openIncidents
+
+print("System health:   " + health)
+print("Recommendation:  " + recommend)
+print("Open incidents:  " + openIncidents.collection)
+
+if health == "down" {
+    POST "https://api.example.com/alerts" save {
+        severity:    "critical",
+        message:     "System is down",
+        recommend:   recommend
+    }
+
+    respond {
+        status: 503,
+        body: {
+            health:     health,
+            recommend:  recommend,
+            incidents:  openIncidents.collection,
+            alerted:    true
+        }
+    }
+}
+
+respond {
+    status: 200,
+    body: {
+        health:    health,
+        recommend: recommend,
+        incidents: openIncidents.collection,
+        alerted:   false
+    }
+}

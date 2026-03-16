@@ -1,0 +1,49 @@
+// Contract Analysis Pipeline
+// Analyses a legal clause for risk level, clause type,
+// and whether it is standard or unusual.
+// This example shows Kova being used for document intelligence —
+// a symbolic program wrapping probabilistic legal reasoning.
+//
+// Run: kova run examples/contract-analysis.kova --graph
+
+let clause = "The licensor reserves the right to terminate this agreement immediately and without notice in the event that the licensee is found to be in breach of any provision herein, including provisions not directly related to the core obligations of this agreement."
+
+let probRisk      = AI("classify legal risk as: low, medium, high, or critical. one word only",               clause)
+let probType      = AI("classify clause type as: termination, liability, payment, IP, or other. one word",    clause)
+let probStandard  = AI("is this clause standard industry practice? respond with only: standard or unusual",   clause)
+let probSummary   = AI("summarize this legal clause in plain English, one sentence",                          clause)
+
+let risk     = resolve(probRisk)
+let type     = resolve(probType)
+let standard = resolve(probStandard)
+let summary  = resolve(probSummary)
+
+print("Risk level: " + risk)
+print("Clause type: " + type)
+print("Standard:   " + standard)
+print("Summary:    " + summary)
+
+let flagForReview = false
+
+if risk == "high" {
+    flagForReview = true
+}
+
+if risk == "critical" {
+    flagForReview = true
+}
+
+if standard == "unusual" {
+    flagForReview = true
+}
+
+respond {
+    status: 200,
+    body: {
+        risk:          risk,
+        type:          type,
+        standard:      standard,
+        summary:       summary,
+        flagForReview: flagForReview
+    }
+}
