@@ -6,6 +6,7 @@ As AI systems become more embedded in backend logic, programs need a way to repr
 
 Kova is a proof-of-concept that deterministic control flow and probabilistic AI calls can coexist with static guarantees, making AI-driven programs easier to audit, debug, and reason about formally.
 
+Made some exmaples, and I am still fleshing out the language spec and writing tests. The README will be updated as the project evolves, but I wanted to get a draft up to share the core ideas and structure.
 ---
 
 ## Overview
