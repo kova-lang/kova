@@ -22,7 +22,7 @@ kova help
 kova run examples/sentiment.kova
 ```
 
-All 117 tests should pass. The sentiment example should run in stub mode without a Groq key.
+All 115 tests should pass. The sentiment example should run in stub mode without a Groq key.
 
 ---
 
