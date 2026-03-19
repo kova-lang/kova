@@ -252,7 +252,7 @@ respond { status: 200, body: { tag: tag } }
 ## Building From Source
 
 ```bash
-git clone https://github.com/Cybugg/kova.git
+git clone https://github.com/kova-lang/kova.git
 cd kova
 npm install
 npm link

@@ -7,7 +7,7 @@ Thanks for your interest in contributing. This document covers everything you ne
 ## Getting Started
 
 ```bash
-git clone https://github.com/Cybugg/kova.git
+git clone https://github.com/kova-lang/kova.git
 cd kova
 npm install
 chmod +x bin/kova.js
