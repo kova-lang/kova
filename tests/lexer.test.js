@@ -16,6 +16,7 @@ export function runLexerTest(name, code) {
     }
 }
 
+console.log("################### Test Init ##################")
 // Test 1: Variable decalaration and assignment
 runLexerTest(
     "let statement",
@@ -71,7 +72,11 @@ runLexerTest(
 runLexerTest("string literals", `let name = "Kova"`);
 
 // Test 10: Edge case - invalid tokens
-runLexerTest("invalid identifier", `let 1user = 10`);
+runLexerTest("invalid identifier1", `let 1user = 10`);
+// Will not throw error because we did not explitly define the law at the lexer level but will throw at the parser level: it will generate the token for the declaration statement as let, minus, identifier, assign, number and EOF but at parser level it will not match the grammar for declaration statement because we would be expecting let + identifier + assign + expression 
+
+runLexerTest("invalid identifier2", `let -user = 15`);
+
 runLexerTest("number followed by identifier", `let x = 123abc`);
 runLexerTest("unterminated string", `let x = "oops`);
 runLexerTest("invalid character", `let x = 10 @ 2`);
