@@ -1,3 +1,5 @@
+// Simple hello greet program in Kova
+
 let name = "samuel"
 fn greet(){
     return "hello"+" "+name
