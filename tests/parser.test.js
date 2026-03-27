@@ -50,7 +50,7 @@ let x = 10
 
 // Test 2 — Arithmetic Precedence
 runParserTest("math precedence", `
-let x = 10 + 2 * 3
+let x = 2 + 3 * 4
 `);
 
 
