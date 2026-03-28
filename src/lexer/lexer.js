@@ -18,7 +18,7 @@ export default class Lexer {
         this.line = 1;
         this.column = 1;
     }
-
+    // Move to the next character and update line/column info
     advance() {
         if (this.currentChar === "\n") {
             this.line++;
@@ -35,7 +35,7 @@ export default class Lexer {
         const pos = this.position + offset;
         return pos < this.code.length ? this.code[pos] : null;
     }
-
+    // Skip whitespace and comments (both single-line and multi-line)
     skipIgnorable() {
         while (this.currentChar !== null) {
             if ([" ", "\t", "\r", "\n"].includes(this.currentChar)) {
@@ -75,7 +75,7 @@ export default class Lexer {
             break;
         }
     }
-
+    // Numbers can be integers or floats (e.g. 42, 3.14) but cannot start with a letter (e.g. 2x is invalid).
     readNumber() {
         let number = "";
         let isFloat = false;
@@ -106,7 +106,7 @@ export default class Lexer {
 
         return { type: "NUMBER", value: Number(number), float: isFloat, line, column };
     }
-
+    // String literals can be enclosed in single or double quotes, and support common escape sequences.
     readString(quote = '"') {
         let string = "";
         const line = this.line;
@@ -131,7 +131,7 @@ export default class Lexer {
         this.advance(); // closing quote
         return { type: "STRING", value: string, line, column };
     }
-
+    // Identifiers can be keywords (e.g. if, else, while) or user-defined names (e.g. myVar).
     readIdentifierOrKeyword() {
         let text = "";
         const line = this.line;
@@ -156,7 +156,7 @@ export default class Lexer {
         }
         return { type: "IDENTIFIER", value: text, line, column };
     }
-
+    // Check for multi-character operators first (e.g. ==, !=, <=, >=), then single-character ones.
     readOperator() {
         const twoCharOp = this.currentChar + this.peek();
         if (MULTI_OPS[twoCharOp]) {
@@ -175,7 +175,7 @@ export default class Lexer {
         }
         return null;
     }
-
+    // Check for single-character program symbols like parentheses, commas, etc.
     readProgramSymbols() {
         if (this.currentChar && PSYMBOLS[this.currentChar]) {
             const line = this.line;
@@ -187,6 +187,7 @@ export default class Lexer {
         return null;
     }
 
+    // Main method to tokenize the input code
     tokenize() {
         const tokens = [];
 
