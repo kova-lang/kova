@@ -131,7 +131,7 @@ export default class Lexer {
         this.advance(); // closing quote
         return { type: "STRING", value: string, line, column };
     }
-    // Identifiers can be keywords (e.g. if, else, while) or user-defined names (e.g. myVar).
+    // Checks Identifiers and keywords (e.g. if, else, while) or user-defined names (e.g. myVar).
     readIdentifierOrKeyword() {
         let text = "";
         const line = this.line;
