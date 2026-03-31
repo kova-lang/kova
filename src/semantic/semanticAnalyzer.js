@@ -12,19 +12,20 @@ export default class SemanticAnalyzer {
 
     // #### Prob helpers ####
     Prob(inner) { return { kind: "prob", inner }; }
-    isProb(t)   { return t && typeof t === "object" && t.kind === "prob"; }
+    isProb(t) { return t && typeof t === "object" && t.kind === "prob"; }
     unwrapProb(t) { return t.inner; }
 
     // #### Scope helpers ####
     enterScope() { this.scopes.push(new Map()); }
-    exitScope()  { this.scopes.pop(); }
+    exitScope() { this.scopes.pop(); }
 
+    // Declare a variable in the current scope with a given type
     declare(name, type) {
         const scope = this.scopes[this.scopes.length - 1];
         if (scope.has(name)) throw new Error(`Variable "${name}" already declared in this scope`);
         scope.set(name, type);
     }
-
+    //  Resolve a variable name to its type, checking all scopes and externals
     resolve(name, node = null) {
         for (let i = this.scopes.length - 1; i >= 0; i--) {
             if (this.scopes[i].has(name)) return this.scopes[i].get(name);
@@ -33,13 +34,13 @@ export default class SemanticAnalyzer {
         if (this.functions[name]) return "function";
         throw new Diagnostic(`Undeclared variable "${name}"`, node, this.source);
     }
-
+    // #### Main analysis method ####
     analyze(ast) {
         this.enterScope();
         this.visit(ast);
         this.exitScope();
     }
-
+    // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
 
@@ -75,9 +76,9 @@ export default class SemanticAnalyzer {
                 return "function";
             }
 
-            case "Identifier":       return this.resolve(node.name, node);
-            case "Literal":          return node.value === null ? "null" : typeof node.value;
-            case "EnvExpression":    return "object"; // process.env is an object
+            case "Identifier": return this.resolve(node.name, node);
+            case "Literal": return node.value === null ? "null" : typeof node.value;
+            case "EnvExpression": return "object"; // process.env is an object
 
             case "ArrayExpression":
                 node.elements.forEach(el => this.visit(el));
@@ -142,7 +143,7 @@ export default class SemanticAnalyzer {
                 if (this.isProb(testType)) this.error("Probabilistic value cannot be used in 'if' condition. Use resolve().", node.test);
                 if (testType !== "boolean" && testType !== "unknown") this.error(`If condition must be boolean, got "${testType}"`, node);
                 const consReturn = this.analyzeBranch(node.consequent);
-                const altReturn  = node.alternate ? this.analyzeBranch(node.alternate) : null;
+                const altReturn = node.alternate ? this.analyzeBranch(node.alternate) : null;
                 if (consReturn && altReturn && consReturn !== altReturn) this.error(`Mismatched return types: ${consReturn} vs ${altReturn}`, node);
                 return consReturn ?? altReturn ?? null;
             }
@@ -184,23 +185,23 @@ export default class SemanticAnalyzer {
                 return "unknown";
             }
 
-            case "ExpressionStatement":  return this.visit(node.expression);
+            case "ExpressionStatement": return this.visit(node.expression);
 
             // #### HTTP ####
             case "HttpStatement": {
                 this.visit(node.url);
-                if (node.body)    this.visit(node.body);
+                if (node.body) this.visit(node.body);
                 if (node.headers) this.visit(node.headers);
                 // Bind result variable into scope
                 if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) {}
+                    try { this.declare(node.binding.name, "object"); } catch (_) { }
                 }
                 return null;
             }
 
             case "HttpExpression": {
                 this.visit(node.url);
-                if (node.body)    this.visit(node.body);
+                if (node.body) this.visit(node.body);
                 if (node.headers) this.visit(node.headers);
                 return "object";
             }
@@ -214,24 +215,24 @@ export default class SemanticAnalyzer {
             case "ConnectStatement":
                 this.visit(node.config);
                 if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) {}
+                    try { this.declare(node.binding.name, "object"); } catch (_) { }
                 }
                 // Also declare the driver name as default connection variable
-                try { this.declare(node.driver, "object"); } catch (_) {}
+                try { this.declare(node.driver, "object"); } catch (_) { }
                 return "object";
 
             case "FindStatement":
                 if (node.filter) this.visit(node.filter);
-                if (node.limit)  this.visit(node.limit);
+                if (node.limit) this.visit(node.limit);
                 if (node.binding) {
-                    try { this.declare(node.binding.name, "array"); } catch (_) {}
+                    try { this.declare(node.binding.name, "array"); } catch (_) { }
                 }
                 return "array";
 
             case "InsertStatement":
                 this.visit(node.document);
                 if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) {}
+                    try { this.declare(node.binding.name, "object"); } catch (_) { }
                 }
                 return "object";
 
@@ -239,17 +240,17 @@ export default class SemanticAnalyzer {
                 this.visit(node.updates);
                 if (node.filter) this.visit(node.filter);
                 if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) {}
+                    try { this.declare(node.binding.name, "object"); } catch (_) { }
                 }
                 return "object";
 
             // #### Imports ####
             case "ImportStatement":
-                node.specifiers.forEach(spec => { try { this.declare(spec, "unknown"); } catch (_) {} });
-                if (node.defaultImport) { try { this.declare(node.defaultImport, "unknown"); } catch (_) {} }
+                node.specifiers.forEach(spec => { try { this.declare(spec, "unknown"); } catch (_) { } });
+                if (node.defaultImport) { try { this.declare(node.defaultImport, "unknown"); } catch (_) { } }
                 return null;
 
-            case "ExportStatement":  return this.visit(node.declaration);
+            case "ExportStatement": return this.visit(node.declaration);
 
             // #### Functions ####
             case "CallExpression": {
@@ -268,7 +269,7 @@ export default class SemanticAnalyzer {
                 }
 
                 // Core built-ins
-                const BUILTINS = { print:"null", len:"number", push:"null", pop:"unknown", keys:"array", values:"array", toString:"string", toNumber:"number", typeOf:"string", range:"array", resolve:"unknown" };
+                const BUILTINS = { print: "null", len: "number", push: "null", pop: "unknown", keys: "array", values: "array", toString: "string", toNumber: "number", typeOf: "string", range: "array", resolve: "unknown" };
                 if (Object.prototype.hasOwnProperty.call(BUILTINS, fnName)) {
                     node.arguments.forEach(a => this.visit(a));
                     return BUILTINS[fnName];
@@ -316,7 +317,7 @@ export default class SemanticAnalyzer {
         }
         return null;
     }
-
+    //  Analyze a branch of an if-statement, which could be either a block or a single statement. Return the type of any return statement found.
     analyzeBranch(node) {
         if (!node) return null;
         if (node.type === "BlockStatement") {
