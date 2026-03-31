@@ -33,6 +33,7 @@ export default class Parser {
         return tok;
     }
 
+    // #### Program structure ####
     parseProgram(tokens) {
         this.tokens = tokens;
         this.currentPos = 0;
@@ -103,6 +104,7 @@ export default class Parser {
         };
     }
 
+    // function declaration:  fn name(params) { ... }
     parseFunctionDeclaration() {
         const fnToken = this.currentToken;
         this.expect("FN");
@@ -142,6 +144,7 @@ export default class Parser {
         };
     }
 
+    // function parameter:  name: typeAnnotation?
     parseParam() {
         const name = this.currentToken;
         this.expect("IDENTIFIER");
@@ -161,7 +164,6 @@ export default class Parser {
     }
 
     // #### Control flow ####
-
     parseIfStatement() {
         const ifToken = this.currentToken;
         this.expect("IF");
@@ -177,6 +179,7 @@ export default class Parser {
         return { type: "IfStatement", test, consequent, alternate, line: ifToken.line, column: ifToken.column };
     }
 
+    // while (test) { body }
     parseWhileStatement() {
         const tok = this.currentToken;
         this.expect("WHILE");
@@ -185,6 +188,7 @@ export default class Parser {
         return { type: "WhileStatement", test, body, line: tok.line, column: tok.column };
     }
 
+    // for id in iterable { body }
     parseForStatement() {
         const tok = this.currentToken;
         this.expect("FOR");
