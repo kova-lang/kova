@@ -135,7 +135,11 @@ kova/
 │       └── diagnostic.js        Error formatting
 ├── lib/
 │   └── functions/
-│       └── index.js             Built-in functions and type signatures
+│   |    └── index.js            Built-in functions and type signatures
+│   └── regex/
+│   |    └── index.js            Regex expressions to match code values 
+│   └── constants/
+│       └── store.js             Keywords and symbols store
 ├── examples/
 │   ├── sentiment.kova           Sentiment classification pipeline
 │   ├── pipeline.kova            Multi-step AI pipeline with graph output
