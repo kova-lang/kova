@@ -100,7 +100,6 @@ export class ExecutionGraph {
     build(ast) {
         const entryId = this.addNode("entry", "START", {});
         const exitId  = this.addNode("exit",  "END",   {});
-
         const lastId = this._visitProgram(ast.body, entryId);
         this.addEdge(lastId, exitId, "seq");
 
