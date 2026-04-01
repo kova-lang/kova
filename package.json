@@ -9,11 +9,17 @@
   },
   "scripts": {
     "test": "node tests/kova.test.js",
-    "repl": "node repl.js"
+    "repl": "node repl.js",
+    "prepare": "husky"
   },
   "author": "Samuel Ifedapo Oguntimehin",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "husky": "^9.1.7"
   }
 }
