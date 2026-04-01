@@ -127,7 +127,7 @@ export default class Lexer {
         }
 
         if (this.currentChar !== quote) {
-            throw new Error(`Unterminated string literal starting at line ${line}`);
+            throw new Error(`Unterminated string literal starting at line ${line}, column ${column}`);
         }
         this.advance(); // closing quote
         return { type: "STRING", value: string, line, column };
