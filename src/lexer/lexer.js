@@ -1,23 +1,22 @@
+// Imports
+import { KEYWORDS, SINGLE_OPS, PSYMBOLS, MULTI_OPS, ESCAPE_MAP } from "../../lib/constants/store.js";
 import {
-    KEYWORDS,
-    SINGLE_OPS,
-    PSYMBOLS,
-    MULTI_OPS,
-} from "../../lib/constants/store.js";
-import {
-    LETTER_RGX,
-    NUMBER_RGX,
-    OP_RGX,
+    LETTER_RGX, NUMBER_RGX, OP_RGX,
 } from "../../lib/regex/index.js";
 
+
+// #### Lexer class #####
 export default class Lexer {
+
     constructor(code) {
+        // inits
         this.code = code || "";
         this.position = 0;
         this.currentChar = this.code.length ? this.code[0] : null;
         this.line = 1;
         this.column = 1;
     }
+
     // Move to the next character and update line/column info
     advance() {
         if (this.currentChar === "\n") {
@@ -117,8 +116,7 @@ export default class Lexer {
             // escape sequences
             if (this.currentChar === "\\") {
                 this.advance();
-                const escapes = { n: "\n", t: "\t", r: "\r", "\\": "\\", '"': '"', "'": "'" };
-                string += escapes[this.currentChar] ?? this.currentChar;
+                string += ESCAPE_MAP[this.currentChar] ?? this.currentChar;
             } else {
                 string += this.currentChar;
             }
