@@ -30,10 +30,12 @@ export default class Lexer {
             this.position < this.code.length ? this.code[this.position] : null;
     }
 
+    // Check the next character without advancing
     peek(offset = 1) {
         const pos = this.position + offset;
         return pos < this.code.length ? this.code[pos] : null;
     }
+
     // Skip whitespace and comments (both single-line and multi-line)
     skipIgnorable() {
         while (this.currentChar !== null) {
@@ -41,13 +43,13 @@ export default class Lexer {
                 this.advance();
                 continue;
             }
-            // # comment
+            // (# comment)
             if (this.currentChar === "#") {
                 while (this.currentChar !== "\n" && this.currentChar !== null)
                     this.advance();
                 continue;
             }
-            // // comment
+            // (// comment)
             if (this.currentChar === "/" && this.peek() === "/") {
                 this.advance();
                 this.advance();
@@ -55,10 +57,10 @@ export default class Lexer {
                     this.advance();
                 continue;
             }
-            // /* block comment */
+            // (/* block comment */)
             if (this.currentChar === "/" && this.peek() === "*") {
-                this.advance();
-                this.advance();
+                this.advance(); // /
+                this.advance(); // *
                 while (
                     this.currentChar !== null &&
                     !(this.currentChar === "*" && this.peek() === "/")
