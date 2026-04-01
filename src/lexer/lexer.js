@@ -159,8 +159,9 @@ export default class Lexer {
     }
     // Check for multi-character operators first (e.g. ==, !=, <=, >=), then single-character ones.
     readOperator() {
-        const twoCharOp = this.currentChar + this.peek();
-        if (MULTI_OPS[twoCharOp]) {
+        const nextChar = this.peek();
+        const twoCharOp = nextChar !== null ? this.currentChar + nextChar:null;
+        if (twoCharOp && MULTI_OPS[twoCharOp]) {
             const line = this.line;
             const column = this.column;
             this.advance();
