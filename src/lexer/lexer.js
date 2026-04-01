@@ -90,7 +90,7 @@ export default class Lexer {
 
         const nextChar = this.peek();
         // float support: 3.14
-        if (this.currentChar === "." && nextChar !==null && NUMBER_RGX.test(nextChar)) {
+        if (this.currentChar === "." && nextChar !== null && NUMBER_RGX.test(nextChar)) {
             isFloat = true;
             number += this.currentChar;
             this.advance();
