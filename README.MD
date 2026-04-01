@@ -283,7 +283,7 @@ kova help
 npm test
 ```
 
-117 tests covering: variable declarations, arithmetic, comparison, logical operators, loops, functions, closures, arrays, objects, HTTP verbs, database operations, environment variables, imports, respond statements, real-world backend snippets, and the full `AI()` / `Prob<T>` / `resolve()` type system.
+115 tests covering: variable declarations, arithmetic, comparison, logical operators, loops, functions, closures, arrays, objects, HTTP verbs, database operations, environment variables, imports, respond statements, real-world backend snippets, and the full `AI()` / `Prob<T>` / `resolve()` type system.
 
 ---
 
