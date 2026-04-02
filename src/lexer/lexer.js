@@ -179,7 +179,7 @@ export default class Lexer {
     }
     // Check for single-character program symbols like parentheses, commas, etc.
     readProgramSymbols() {
-        if (this.currentChar && PSYMBOLS[this.currentChar]) {
+        if (PSYMBOLS[this.currentChar]) {
             const line = this.line;
             const column = this.column;
             const value = this.currentChar;
