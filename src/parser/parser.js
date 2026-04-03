@@ -1,4 +1,4 @@
-import { CONTEXTUAL_KW_TYPES } from "../../lib/constants/store";
+import { CONTEXTUAL_KW_TYPES, LITERAL_TYPES } from "../../lib/constants/store.js";
 
 export default class Parser {
     constructor() {
@@ -691,10 +691,10 @@ export default class Parser {
     parsePrimary() {
         const token = this.currentToken;
 
-        if (token.type === "NUMBER") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
-        if (token.type === "STRING") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
-        if (token.type === "BOOLEAN") { this.advance(); return { type: "Literal", value: token.value, line: token.line, column: token.column }; }
-        if (token.type === "NULL") { this.advance(); return { type: "Literal", value: null, line: token.line, column: token.column }; }
+        if (LITERAL_TYPES.has(token.type)) {
+            this.advance();
+            return { type: "Literal", value: token.value, line: token.line, column: token.column };
+        }
 
         // ENV  →  treated as a special identifier that resolves to process.env
         if (token.type === "ENV") {
