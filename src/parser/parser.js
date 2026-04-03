@@ -1,3 +1,5 @@
+import { CONTEXTUAL_KW_TYPES } from "../../lib/constants/store";
+
 export default class Parser {
     constructor() {
         this.tokens = [];
@@ -708,10 +710,6 @@ export default class Parser {
         // Contextual keywords: when used as a value (not at statement position),
         // keywords like `update`, `limit`, `set`, `find`, `insert`, `where`, `respond`
         // are valid variable names. Treat them as identifiers here.
-        const CONTEXTUAL_KW_TYPES = new Set([
-            "UPDATE", "FIND", "INSERT", "SET", "LIMIT", "WHERE", "ORDER_BY",
-            "ASC", "DESC", "RESPOND", "CONNECT", "USING", "SAVE", "INTO", "FROM"
-        ]);
         if (CONTEXTUAL_KW_TYPES.has(token.type)) {
             this.advance();
             return { type: "Identifier", name: token.value, line: token.line, column: token.column };
