@@ -30,27 +30,38 @@ All 115 tests should pass. The sentiment example should run in stub mode without
 
 ```
 kova/
-├── bin/kova.js                  CLI entry point
+├── bin/
+│   └── kova.js                  CLI entry point
 ├── src/
-│   ├── index.js                 Public API: runKova, runKovaSync, parseKova
-│   ├── lexer/lexer.js           Tokenizer
-│   ├── parser/parser.js         Recursive-descent parser
+│   ├── index.js                 Public API , runKova(), runKovaSync(), parseKova()
+│   ├── lexer/
+│   │   └── lexer.js             Tokenizer
+│   ├── parser/
+│   │   └── parser.js            Recursive-descent parser
 │   ├── semantic/
-│   │   └── semanticAnalyzer.js  Type checker and Prob<T> enforcement
+│   │   └── semanticAnalyzer.js  Type checker + Prob<T> enforcement
 │   ├── interpreter/
 │   │   └── interpreter.js       Async tree-walk interpreter
 │   ├── graph/
 │   │   └── executionGraph.js    Execution graph engine
 │   ├── ai/
-│   │   └── groq.js              Groq client and Prob<T> runtime
+│   │   └── groq.js              Groq AI client + Prob<T> type implementation
 │   └── core/
 │       └── diagnostic.js        Error formatting
 ├── lib/
-│   ├── constants/store.js       Keywords, operators, punctuation
-│   ├── functions/index.js       Built-in function signatures
-│   └── regex/index.js           Character class regexes
-├── examples/                    Sample .kova programs
-└── tests/kova.test.js           Test suite
+│   └── functions/
+│   |    └── index.js            Built-in functions and type signatures
+│   └── regex/
+│   |    └── index.js            Regex expressions to match code values 
+│   └── constants/
+│       └── store.js             Keywords and symbols store
+├── examples/
+│   ├── sentiment.kova           Sentiment classification pipeline
+│   ├── pipeline.kova            Multi-step AI pipeline with graph output
+│   └── api.kova                 HTTP fetch + AI tagging + conditional POST
+├── tests/
+│   └── kova.test.js             115-test suite
+└── README.md
 ```
 
 ---
