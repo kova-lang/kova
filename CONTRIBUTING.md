@@ -163,7 +163,7 @@ Before opening a pull request:
 1. Write a test that reproduces the bug and fails
 2. Fix the bug
 3. Confirm the test now passes
-4. Confirm all 117 existing tests still pass
+4. Confirm all 115 existing tests still pass
 
 ---
 
