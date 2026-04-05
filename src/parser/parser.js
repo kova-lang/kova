@@ -685,7 +685,9 @@ export default class Parser {
                 } else if (prop.value != null) {
                     this.advance();
                 } else {
-                    throw new Error(`Expected property name after '.' at line ${prop.line}, column ${prop.column}`);
+                    const line = prop.line ?? dot.line;
+                    const column = prop.column ?? dot.column;
+                    throw new Error(`Expected property name after '.' at line ${line}, column ${column}`);
                 }
                 node = { type: "MemberExpression", object: node, property: prop.value, computed: false, line: dot.line, column: dot.column };
             } else if (this.currentToken.type === "LBRACKET") {
