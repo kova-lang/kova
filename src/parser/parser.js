@@ -1,4 +1,4 @@
-import { CONTEXTUAL_KW_TYPES, LITERAL_TYPES } from "../../lib/constants/store.js";
+import { assignOps, CONTEXTUAL_KW_TYPES, HTTP, LITERAL_TYPES } from "../../lib/constants/store.js";
 
 export default class Parser {
     constructor() {
