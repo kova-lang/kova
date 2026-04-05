@@ -1,4 +1,4 @@
-import { assignOps, CONTEXTUAL_KW_TYPES, HTTP, LITERAL_TYPES } from "../../lib/constants/store.js";
+import { ASSIGN_OPS, CONTEXTUAL_KW_TYPES, HTTP, LITERAL_TYPES } from "../../lib/constants/store.js";
 
 export default class Parser {
     constructor() {
@@ -551,7 +551,7 @@ export default class Parser {
         const left = this.parseLogicalOr();
 
 
-        if (assignOps.includes(this.currentToken.type)) {
+        if (ASSIGN_OPS.includes(this.currentToken.type)) {
             const op = this.currentToken;
             this.advance();
 
