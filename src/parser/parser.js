@@ -535,7 +535,6 @@ export default class Parser {
 
     parseExpression() {
         // HTTP verbs used as expressions: let res = GET "url"
-        const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
         if (HTTP.includes(this.currentToken.type)) {
             return this.parseHttpExpression();
         }
@@ -559,7 +558,7 @@ export default class Parser {
             if (left.type !== "Identifier" && left.type !== "MemberExpression") {
                 throw new Error("Invalid assignment target");
             }
-            
+
             const right = HTTP.includes(this.currentToken.type)
                 ? this.parseHttpExpression()
                 : this.parseAssignment();
