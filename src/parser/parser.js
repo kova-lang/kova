@@ -359,10 +359,10 @@ export default class Parser {
             this.advance();
             const field = this.currentToken;
             this.expect("IDENTIFIER");
-            const dir = (this.currentToken.type === "ASC" || this.currentToken.type === "DESC")
-                ? this.currentToken.value
+            const isDirectional = this.currentToken.type === "ASC" || this.currentToken.type === "DESC";
+            const dir = isDirectional? this.currentToken.value
                 : "asc";
-            if (this.currentToken.type === "ASC" || this.currentToken.type === "DESC") this.advance();
+            if (isDirectional) this.advance();
             orderBy = { field: field.value, direction: dir };
         }
 
