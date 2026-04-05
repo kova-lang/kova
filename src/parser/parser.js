@@ -1,4 +1,4 @@
-import { CONTEXTUAL_KW_TYPES, LITERAL_TYPES } from "../../lib/constants/store.js";
+import { ASSIGN_OPS, CONTEXTUAL_KW_TYPES, HTTP, LITERAL_TYPES } from "../../lib/constants/store.js";
 
 export default class Parser {
     constructor() {
@@ -535,7 +535,6 @@ export default class Parser {
 
     parseExpression() {
         // HTTP verbs used as expressions: let res = GET "url"
-        const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
         if (HTTP.includes(this.currentToken.type)) {
             return this.parseHttpExpression();
         }
@@ -551,19 +550,19 @@ export default class Parser {
     parseAssignment() {
         const left = this.parseLogicalOr();
 
-        const assignOps = ["ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN", "SLASH_ASSIGN"];
-        if (assignOps.includes(this.currentToken.type)) {
+
+        if (ASSIGN_OPS.includes(this.currentToken.type)) {
             const op = this.currentToken;
             this.advance();
-
-            const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
-            const right = HTTP.includes(this.currentToken.type)
-                ? this.parseHttpExpression()
-                : this.parseAssignment();
 
             if (left.type !== "Identifier" && left.type !== "MemberExpression") {
                 throw new Error("Invalid assignment target");
             }
+
+            const right = HTTP.includes(this.currentToken.type)
+                ? this.parseHttpExpression()
+                : this.parseAssignment();
+
 
             return {
                 type: "AssignmentExpression",
