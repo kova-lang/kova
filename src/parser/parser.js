@@ -551,19 +551,19 @@ export default class Parser {
     parseAssignment() {
         const left = this.parseLogicalOr();
 
-        const assignOps = ["ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN", "SLASH_ASSIGN"];
+
         if (assignOps.includes(this.currentToken.type)) {
             const op = this.currentToken;
             this.advance();
 
-            const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
+            if (left.type !== "Identifier" && left.type !== "MemberExpression") {
+                throw new Error("Invalid assignment target");
+            }
+            
             const right = HTTP.includes(this.currentToken.type)
                 ? this.parseHttpExpression()
                 : this.parseAssignment();
 
-            if (left.type !== "Identifier" && left.type !== "MemberExpression") {
-                throw new Error("Invalid assignment target");
-            }
 
             return {
                 type: "AssignmentExpression",
