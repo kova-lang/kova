@@ -360,7 +360,7 @@ export default class Parser {
             const field = this.currentToken;
             this.expect("IDENTIFIER");
             const isDirectional = this.currentToken.type === "ASC" || this.currentToken.type === "DESC";
-            const dir = isDirectional? this.currentToken.value
+            const dir = isDirectional ? this.currentToken.value
                 : "asc";
             if (isDirectional) this.advance();
             orderBy = { field: field.value, direction: dir };
@@ -680,10 +680,12 @@ export default class Parser {
                 const dot = this.currentToken; this.advance();
                 const prop = this.currentToken;
                 // allow contextual keywords as property names after dot
-                if (prop.type !== "IDENTIFIER" && prop.value != null) {
-                    this.advance(); // consume the keyword-as-property
-                } else {
+                if (prop.type === "IDENTIFIER") {
                     this.expect("IDENTIFIER");
+                } else if (prop.value != null) {
+                    this.advance();
+                } else {
+                    throw new Error(`Expected property name after '.' at line ${prop.line}, column ${prop.column}`);
                 }
                 node = { type: "MemberExpression", object: node, property: prop.value, computed: false, line: dot.line, column: dot.column };
             } else if (this.currentToken.type === "LBRACKET") {
