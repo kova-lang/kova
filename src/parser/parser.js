@@ -35,6 +35,17 @@ export default class Parser {
         return tok;
     }
 
+    makeBinary(op, left, right) {
+        return {
+            type: "BinaryExpression",
+            operator: op.value,
+            left,
+            right,
+            line: op.line,
+            column: op.column,
+        };
+    }
+
     // #### Program structure ####
     parseProgram(tokens) {
         this.tokens = tokens;
@@ -601,7 +612,7 @@ export default class Parser {
         let left = this.parseLogicalAnd();
         while (this.currentToken.type === "OR") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseLogicalAnd(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseLogicalAnd());
         }
         return left;
     }
@@ -610,7 +621,7 @@ export default class Parser {
         let left = this.parseEquality();
         while (this.currentToken.type === "AND") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseEquality(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseEquality());
         }
         return left;
     }
@@ -619,7 +630,7 @@ export default class Parser {
         let left = this.parseComparison();
         while (this.currentToken.type === "EQ" || this.currentToken.type === "NEQ") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseComparison(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseComparison());
         }
         return left;
     }
@@ -628,7 +639,7 @@ export default class Parser {
         let left = this.parseTerm();
         while (["GT", "LT", "GTE", "LTE"].includes(this.currentToken.type)) {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseTerm(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseTerm());
         }
         return left;
     }
@@ -637,7 +648,7 @@ export default class Parser {
         let left = this.parseFactor();
         while (this.currentToken.type === "PLUS" || this.currentToken.type === "MINUS") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseFactor(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseFactor());
         }
         return left;
     }
@@ -646,7 +657,7 @@ export default class Parser {
         let left = this.parseUnary();
         while (["STAR", "SLASH", "PERCENT"].includes(this.currentToken.type)) {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseUnary(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseUnary());
         }
         return left;
     }
