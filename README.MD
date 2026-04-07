@@ -133,6 +133,9 @@ kova/
 │   │   └── groq.js              Groq AI client + Prob<T> type implementation
 │   └── core/
 │       └── diagnostic.js        Error formatting
+|
+├── lab/                        Isolated Experimental Computations
+|
 ├── lib/
 │   └── functions/
 │   |    └── index.js            Built-in functions and type signatures
