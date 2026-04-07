@@ -70,26 +70,75 @@ const expect = (token) => {
 // Right-associative: rightBP == leftBP - 1  e.g. **
 
 const LED_BP = {
-  "||":  [6,  6 ],   // logical or         (left)
-  "&&":  [7,  7 ],   // logical and        (left)
-  "==":  [10, 10],   // equality           (left)
-  "!=":  [10, 10],
-  "<":   [11, 11],   // relational         (left)
-  ">":   [11, 11],
-  "<=":  [11, 11],
-  ">=":  [11, 11],
-  "+":   [13, 13],   // additive           (left)
-  "-":   [13, 13],
-  "*":   [14, 14],   // multiplicative     (left)
-  "/":   [14, 14],
-  "%":   [14, 14],
-  "**":  [15, 14],   // exponentiation     (RIGHT: rightBP is lower)
+    "||": [6, 6],   // logical or         (left)
+    "&&": [7, 7],   // logical and        (left)
+    "==": [10, 10],   // equality           (left)
+    "!=": [10, 10],
+    "<": [11, 11],   // relational         (left)
+    ">": [11, 11],
+    "<=": [11, 11],
+    ">=": [11, 11],
+    "+": [13, 13],   // additive           (left)
+    "-": [13, 13],
+    "*": [14, 14],   // multiplicative     (left)
+    "/": [14, 14],
+    "%": [14, 14],
+    "**": [15, 14],   // exponentiation     (RIGHT: rightBP is lower)
 };
- 
+
 // Prefix binding powers for unary operators
 const NUD_BP = {
-  "-": 16,
-  "+": 16,
-  "!": 16,
+    "-": 16,
+    "+": 16,
+    "!": 16,
 };
- 
+
+// #### Pratt Perser Core ####
+
+const parseExpr = (minBP = 0) => {
+    let left = parseNud();
+
+    while (true) {
+        const op = peek();
+        const entry = LED_BP[op];
+        if (!entry) break;
+        const [leftBP, rightBP] = entry;
+        if (leftBP <= minBP) break;   // not strong enough to grab our left side
+        advance();                     // consume the operator
+        const right = parseExpr(rightBP);
+        left = { type: "BinOp", op, left, right };
+    }
+
+    return left;
+}
+
+// Helper function 
+const parseNud = () => {
+    const tok = advance();
+
+    // Number literal
+    if (/^\d/.test(tok)) {
+        return { type: "Num", value: parseFloat(tok) };
+    }
+
+    // Identifier (variable)
+    if (/^[a-zA-Z_]/.test(tok)) {
+        return { type: "Var", name: tok };
+    }
+
+    // Grouped expression
+    if (tok === "(") {
+        const inner = parseExpr(0);
+        expect(")");
+        return inner;
+    }
+
+    // Unary prefix
+    const ubp = NUD_BP[tok];
+    if (ubp !== undefined) {
+        const operand = parseExpr(ubp);
+        return { type: "UnOp", op: tok, operand };
+    }
+
+    throw new Error(`Unexpected token in nud: '${tok}'`);
+}
