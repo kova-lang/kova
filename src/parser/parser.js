@@ -1,4 +1,4 @@
-import { CONTEXTUAL_KW_TYPES, LITERAL_TYPES } from "../../lib/constants/store.js";
+import { ASSIGN_OPS, CONTEXTUAL_KW_TYPES, HTTP, LITERAL_TYPES } from "../../lib/constants/store.js";
 
 export default class Parser {
     constructor() {
@@ -33,6 +33,17 @@ export default class Parser {
         const tok = this.currentToken;
         this.advance();
         return tok;
+    }
+
+    makeBinary(op, left, right) {
+        return {
+            type: "BinaryExpression",
+            operator: op.value,
+            left,
+            right,
+            line: op.line,
+            column: op.column,
+        };
     }
 
     // #### Program structure ####
@@ -348,10 +359,10 @@ export default class Parser {
             this.advance();
             const field = this.currentToken;
             this.expect("IDENTIFIER");
-            const dir = (this.currentToken.type === "ASC" || this.currentToken.type === "DESC")
-                ? this.currentToken.value
+            const isDirectional = this.currentToken.type === "ASC" || this.currentToken.type === "DESC";
+            const dir = isDirectional ? this.currentToken.value
                 : "asc";
-            if (this.currentToken.type === "ASC" || this.currentToken.type === "DESC") this.advance();
+            if (isDirectional) this.advance();
             orderBy = { field: field.value, direction: dir };
         }
 
@@ -524,7 +535,6 @@ export default class Parser {
 
     parseExpression() {
         // HTTP verbs used as expressions: let res = GET "url"
-        const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
         if (HTTP.includes(this.currentToken.type)) {
             return this.parseHttpExpression();
         }
@@ -540,19 +550,19 @@ export default class Parser {
     parseAssignment() {
         const left = this.parseLogicalOr();
 
-        const assignOps = ["ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN", "SLASH_ASSIGN"];
-        if (assignOps.includes(this.currentToken.type)) {
+
+        if (ASSIGN_OPS.includes(this.currentToken.type)) {
             const op = this.currentToken;
             this.advance();
-
-            const HTTP = ["GET_HTTP", "POST_HTTP", "PUT_HTTP", "DELETE_HTTP", "PATCH_HTTP"];
-            const right = HTTP.includes(this.currentToken.type)
-                ? this.parseHttpExpression()
-                : this.parseAssignment();
 
             if (left.type !== "Identifier" && left.type !== "MemberExpression") {
                 throw new Error("Invalid assignment target");
             }
+
+            const right = HTTP.includes(this.currentToken.type)
+                ? this.parseHttpExpression()
+                : this.parseAssignment();
+
 
             return {
                 type: "AssignmentExpression",
@@ -601,7 +611,7 @@ export default class Parser {
         let left = this.parseLogicalAnd();
         while (this.currentToken.type === "OR") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseLogicalAnd(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseLogicalAnd());
         }
         return left;
     }
@@ -610,7 +620,7 @@ export default class Parser {
         let left = this.parseEquality();
         while (this.currentToken.type === "AND") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseEquality(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseEquality());
         }
         return left;
     }
@@ -619,7 +629,7 @@ export default class Parser {
         let left = this.parseComparison();
         while (this.currentToken.type === "EQ" || this.currentToken.type === "NEQ") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseComparison(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseComparison());
         }
         return left;
     }
@@ -628,7 +638,7 @@ export default class Parser {
         let left = this.parseTerm();
         while (["GT", "LT", "GTE", "LTE"].includes(this.currentToken.type)) {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseTerm(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseTerm());
         }
         return left;
     }
@@ -637,7 +647,7 @@ export default class Parser {
         let left = this.parseFactor();
         while (this.currentToken.type === "PLUS" || this.currentToken.type === "MINUS") {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseFactor(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseFactor());
         }
         return left;
     }
@@ -646,7 +656,7 @@ export default class Parser {
         let left = this.parseUnary();
         while (["STAR", "SLASH", "PERCENT"].includes(this.currentToken.type)) {
             const op = this.currentToken; this.advance();
-            left = { type: "BinaryExpression", operator: op.value, left, right: this.parseUnary(), line: op.line, column: op.column };
+            left = this.makeBinary(op, left, this.parseUnary());
         }
         return left;
     }
@@ -669,10 +679,14 @@ export default class Parser {
                 const dot = this.currentToken; this.advance();
                 const prop = this.currentToken;
                 // allow contextual keywords as property names after dot
-                if (prop.type !== "IDENTIFIER" && prop.value != null) {
-                    this.advance(); // consume the keyword-as-property
-                } else {
+                if (prop.type === "IDENTIFIER") {
                     this.expect("IDENTIFIER");
+                } else if (prop.value != null) {
+                    this.advance();
+                } else {
+                    const line = prop.line ?? dot.line;
+                    const column = prop.column ?? dot.column;
+                    throw new Error(`Expected property name after '.' at line ${line}, column ${column}`);
                 }
                 node = { type: "MemberExpression", object: node, property: prop.value, computed: false, line: dot.line, column: dot.column };
             } else if (this.currentToken.type === "LBRACKET") {
