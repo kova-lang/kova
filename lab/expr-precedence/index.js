@@ -1,0 +1,37 @@
+
+/**
+ * 
+ * A self-contained Pratt parser for arithmetic and comparison expressions.
+ * Models JavaScript's precedence table from lowest to highest binding power.
+ *
+ * Concepts demonstrated:
+ *   - - - - - - - - - - - -
+ */
+
+// #### Okay, so first, what is a Pratt Parser?
+//  Pratt Parser, also known as the Top-down Operator Precedence parser is an algo used to parse programming languages. Cliche!
+// But here is the catch. unlike the function chain approach that we implemented in the main folder (src), the Pratt perser uses a numerical value known as the binding power representing the operators's precedence. It makes use of two handler function, Null and Left detonaation, (NUD) and (LED) respectively.
+// The NUD is the handler function is for token that appears at the beginning of an expression, the prefix position.
+// The LED is for when the token has the expression occuring at the left.
+
+// #### Now lets code;
+
+
+// #### The Lexer #####
+// This regex will be used to test each char in the code string respectively
+const Token_Reg = /\s*(\d+(?:\.\d+)?|\*\*|&&|\|\||[<>]=?|[!=]=|[+\-*\/^%]|[(),]|[a-zA-Z_]\w*)\s*/y;
+
+const tokenise = (code) => {
+
+    // init the token array
+    const tokens = [];
+    // restarting the scan
+    Token_Reg.lastIndex(0);
+    let m;
+    while(m = Token_Reg.exec(code) !== null){
+        tokens.push(m[1])
+    }
+    tokens.push("EOF");
+    return tokens;
+}
+
