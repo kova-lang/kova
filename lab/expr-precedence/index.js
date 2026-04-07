@@ -55,7 +55,7 @@ const advance = () => {
 }
 const expect = (token) => {
     const got = advance();
-    if (got !== t) throw new Error(`Expected '${t}', got '${got}'`);
+    if (got !== token) throw new Error(`Expected '${t}', got '${got}'`);
     return got;
 }
 
