@@ -148,7 +148,7 @@ kova/
 │   ├── pipeline.kova            Multi-step AI pipeline with graph output
 │   └── api.kova                 HTTP fetch + AI tagging + conditional POST
 ├── tests/
-│   └── kova.test.js             117-test suite
+│   └── kova.test.js             115-test suite
 └── README.md
 ```
 
