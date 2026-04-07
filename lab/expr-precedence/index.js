@@ -28,10 +28,26 @@ const tokenise = (code) => {
     // restarting the scan
     Token_Reg.lastIndex(0);
     let m;
-    while(m = Token_Reg.exec(code) !== null){
+    while (m = Token_Reg.exec(code) !== null) {
         tokens.push(m[1])
     }
     tokens.push("EOF");
     return tokens;
 }
 
+// #### Parser state ####
+// inits
+let tokens = [];
+let pos = 0;
+// methods
+const peek = () => {
+    return tokens[pos];
+};
+const advance = () => {
+    return tokens[pos++]; // the first call will return the token at the init pos, which is of index 0.
+}
+const expect = (token) => {
+    const got = advance();
+    if (got !== t) throw new Error(`Expected '${t}', got '${got}'`);
+    return got;
+}
