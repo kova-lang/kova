@@ -106,7 +106,7 @@ Kova ships with a full interpreter pipeline written in JavaScript:
 * Lexer (tokenizer)
 * Recursive-descent parser (AST generator)
 * Semantic analyzer (type checker)
-* Async interpreter / VM
+* Tree-walk interpreter
 * Execution graph engine
 
 ---
