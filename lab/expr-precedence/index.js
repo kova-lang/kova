@@ -177,11 +177,12 @@ const evaluate = (node, env = {}) => {
             if (node.op === "!") return !v;
         }
         case "BinOp": {
-            // Short-circuit operators
-            if (node.op === "&&") return evaluate(node.left, env) && evaluate(node.right, env);
-            if (node.op === "||") return evaluate(node.left, env) || evaluate(node.right, env);
             const l = evaluate(node.left, env);
             const r = evaluate(node.right, env);
+            // Short-circuit operators
+            if (node.op === "&&") return l && r;
+            if (node.op === "||") return l || r;
+            
             switch (node.op) {
                 case "+": return l + r;
                 case "-": return l - r;
