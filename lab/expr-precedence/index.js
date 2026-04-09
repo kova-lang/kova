@@ -29,18 +29,27 @@ Maintenance	  -    Adding an operator requires             	   -     Adding an o
 const Token_Reg = /\s*(\d+(?:\.\d+)?|\*\*|&&|\|\||[<>]=?|[!=]=|[+\-*\/^%]|[(),]|[a-zA-Z_]\w*)\s*/y;
 
 const tokenise = (code) => {
-
-    // init the token array
     const tokens = [];
-    // restarting the scan
-    Token_Reg.lastIndex(0);
-    let m;
-    while (m = Token_Reg.exec(code) !== null) {
-        tokens.push(m[1])
+    let pos = 0;
+
+    while (pos < code.length) {
+        Token_Reg.lastIndex = pos;
+
+        const m = Token_Reg.exec(code);
+
+        if (!m) {
+            throw new Error("Unexpected token at position " + pos);
+        }
+
+        tokens.push(m[1]);
+
+        // Move forward manually
+        pos = Token_Reg.lastIndex;
     }
+
     tokens.push("EOF");
     return tokens;
-}
+};
 
 // #### Parser state ####
 // inits
