@@ -154,53 +154,95 @@ const parseNud = () => {
 
 // AST printer (compact s-expression form, easy to read)
 function pretty(node) {
-  switch (node.type) {
-    case "Num": return String(node.value);
-    case "Var": return node.name;
-    case "UnOp": return `(${node.op} ${pretty(node.operand)})`;
-    case "BinOp": return `(${node.op} ${pretty(node.left)} ${pretty(node.right)})`;
-    default: return "?";
-  }
+    switch (node.type) {
+        case "Num": return String(node.value);
+        case "Var": return node.name;
+        case "UnOp": return `(${node.op} ${pretty(node.operand)})`;
+        case "BinOp": return `(${node.op} ${pretty(node.left)} ${pretty(node.right)})`;
+        default: return "?";
+    }
 }
- 
+
+const evaluate = (node, env = {}) => {
+    switch (node.type) {
+        case "Num": return node.value;
+        case "Var": {
+            if (!(node.name in env)) throw new Error(`Undefined variable: ${node.name}`);
+            return env[node.name];
+        }
+        case "UnOp": {
+            const v = evaluate(node.operand, env);
+            if (node.op === "-") return -v;
+            if (node.op === "+") return +v;
+            if (node.op === "!") return !v;
+        }
+        case "BinOp": {
+            // Short-circuit operators
+            if (node.op === "&&") return evaluate(node.left, env) && evaluate(node.right, env);
+            if (node.op === "||") return evaluate(node.left, env) || evaluate(node.right, env);
+            const l = evaluate(node.left, env);
+            const r = evaluate(node.right, env);
+            switch (node.op) {
+                case "+": return l + r;
+                case "-": return l - r;
+                case "*": return l * r;
+                case "/": return l / r;
+                case "%": return l % r;
+                case "**": return l ** r;
+                case "<": return l < r;
+                case ">": return l > r;
+                case "<=": return l <= r;
+                case ">=": return l >= r;
+                case "==": return l == r;
+                case "!=": return l != r;
+            }
+        }
+        default: throw new Error(`Unknown node type: ${node.type}`);
+    }
+}
+
 
 // runner
 
 function run(src, env = {}) {
-  tokens = tokenise(src);
-  pos = 0;
-  const ast = parseExpr(0);
-  const result = evaluate(ast, env);
-  console.log(`  expr : ${src}`);
-  console.log(`  ast  : ${pretty(ast)}`);
-  console.log(`  eval : ${result}`);
-  console.log();
+    tokens = tokenise(src);
+    pos = 0;
+    const ast = parseExpr(0);
+    const result = evaluate(ast, env);
+    console.log(`  expr : ${src}`);
+    console.log(`  ast  : ${pretty(ast)}`);
+    console.log(`  eval : ${result}`);
+    console.log();
 }
- 
+
 console.log("=== Pratt Parser: Expression Precedence Lab ===\n");
- 
+
 console.log("-- Precedence: * binds tighter than +");
 run("1 + 2 * 3");           // expects 7, ast: (+ 1 (* 2 3))
- 
+
 console.log("-- Left-associativity: - chains left");
 run("10 - 3 - 2");          // expects 5, ast: (- (- 10 3) 2)
- 
+
 console.log("-- Right-associativity: ** chains right");
 run("2 ** 3 ** 2");         // expects 512, ast: (** 2 (** 3 2))
- 
+
 console.log("-- Grouping overrides precedence");
 run("(1 + 2) * 3");         // expects 9
- 
+
 console.log("-- Unary minus");
 run("-2 ** 2");              // expects -4, unary binds tighter than **? No: -(2**2)
 // NOTE: in JS, -2**2 is a syntax error. Here unary - has bp 16 > ** leftBP 15
 // so this parses as (- (** 2 2)) = -4. Deliberate: worth knowing.
- 
+
 console.log("-- Comparison chains (non-associative in JS, left here)");
 run("1 < 2");                // true
- 
+
 console.log("-- Logical operators, short-circuit eval");
 run("1 == 1 && 2 < 3");     // true
- 
+
 console.log("-- Variables");
 run("x * x + y * y", { x: 3, y: 4 }); // 25
+
+
+// raw-parse
+console.log(parseExpr());
