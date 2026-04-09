@@ -245,5 +245,6 @@ console.log("-- Variables");
 run("x * x + y * y", { x: 3, y: 4 }); // 25
 
 
-// raw-parse
-console.log(parseExpr());
+// Test short circuit operators
+console.log("-- Short-circuit operations");
+run("0||1");
