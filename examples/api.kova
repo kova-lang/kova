@@ -9,4 +9,4 @@ if tag == "bug" {
     POST "https://api.example.com/issues" save { tag: tag, source: response }
 }
 
-respond { status: 200, body: { tagged: tag } }
+respond { status: 200, body: { tagged: tag, source: response }, }
