@@ -15,7 +15,11 @@ const tokenize = (code) => {
         // Next: Numbers
         if (/[0-9]/.test(char)) {
             let value = "";
+            let lookahead = current < code.length - 1 ? code[current + 1] : null;
             while (current < code.length && /[0-9]/.test(code[current])) {
+                if (/[A-Za-z]/.test(lookahead)) {
+                    throw new Error(`Invalid number format at position ${current}: numbers cannot be at the start of an identifier.`);
+                }
                 value += code[current];
                 current++;
             }
@@ -42,3 +46,4 @@ const tokenize = (code) => {
 }
 
 console.log(tokenize("12 + 3 * (4 - 1)"));
+console.log(tokenize("2xt + 5")); // should throw error: numbers cannot be at the start of an identifier
