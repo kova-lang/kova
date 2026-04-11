@@ -153,7 +153,7 @@ const parseNud = () => {
 }
 
 // AST printer (compact s-expression form, easy to read)
-function pretty(node) {
+const pretty = (node) => {
     switch (node.type) {
         case "Num": return String(node.value);
         case "Var": return node.name;
@@ -182,7 +182,7 @@ const evaluate = (node, env = {}) => {
             // Short-circuit operators
             if (node.op === "&&") return l && r;
             if (node.op === "||") return l || r;
-            
+
             switch (node.op) {
                 case "+": return l + r;
                 case "-": return l - r;
@@ -205,7 +205,7 @@ const evaluate = (node, env = {}) => {
 
 // runner
 
-function run(src, env = {}) {
+const run = (src, env = {}) => {
     tokens = tokenise(src);
     pos = 0;
     const ast = parseExpr(0);
