@@ -112,10 +112,26 @@ const parse = (tokens) => {
         }
         throw new Error(`Unexpected token in primary expression: ${token.type}`);
     }
+
     // + -
     const parseAdditive = () => {
-        return parseMultiplicative();
+        let left = parseMultiplicative();
+
+        while (parser.peek() && (parser.peek().type === "+" || parser.peek().type === "-")) {
+            const op = parser.consume().type;
+            const right = parseMultiplicative();
+
+            left = {
+                type: "BinaryExpression",
+                op,
+                left,
+                right
+            };
+        }
+
+        return left;
     }
+
     // * /
     const parseMultiplicative = () => {
         let left = parsePrimary();
