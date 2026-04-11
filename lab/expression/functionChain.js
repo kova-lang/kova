@@ -47,3 +47,35 @@ const tokenize = (code) => {
 
 console.log(tokenize("12 + 3 * (4 - 1)"));
 console.log(tokenize("2xt + 5")); // should throw error: numbers cannot be at the start of an identifier
+
+// Parser: Tokens -> AST
+
+const createParser = (tokens) => {
+    let current = 0;
+
+    // Return Current token without moving forward;
+    const peek = () => {
+        return current < tokens.length ? tokens[current] : null
+    }
+
+    // Consumes and returns the current token
+    const consume = () => {
+        return current < tokens.length ? tokens[current++] : null
+    }
+
+    // Check token matches expceted type
+    const expect = (type) => {
+        const token = peek();
+
+        if (!token || token.type !== tyep) {
+            throw new Error(`Expected token ${type}, got ${token ? token.type : "EOF"}`);
+        }
+        return consume();
+    }
+
+    return{
+        peek,
+        consume,
+        expect
+    }
+} 
