@@ -10,7 +10,7 @@ No build step, no imports from `src/`. Just Node.
 
 ```
 lab/
-  expr-precedence/     Pratt parser: operator binding power, associativity
+  expression/     Pratt parser && Function chain approach folder
 ```
 
 ## Rules for adding a new lab unit
