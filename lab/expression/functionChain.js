@@ -73,9 +73,44 @@ const createParser = (tokens) => {
         return consume();
     }
 
-    return{
+    return {
         peek,
         consume,
         expect
     }
-} 
+}
+
+// main parser function
+
+const parse = (tokens) => {
+
+    const parser = createParser(tokens);
+
+    const parseExpression = () => {
+        return parseAdditive()
+    }
+
+    const parsePrimary = () => {
+        const token = parser.peek();
+        if (!token) {
+            throw new Error("Unexpected end of input");
+        }
+        if (token.type === "NUMBER") {
+            parse.consume();
+
+            return {
+                type: "NumberLiteral",
+                value: token.value
+            }
+        }
+
+        if (token.type === "(") {
+            parse.consume();
+            const expression = parseExpression();
+            parse.expect(")")
+            return expression
+        }
+        throw new Error(`Unexpected token in primary expression: ${token.type}`);
+    }
+    return parseExpression()
+}
