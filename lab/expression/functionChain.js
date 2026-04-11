@@ -46,7 +46,7 @@ const tokenize = (code) => {
 }
 
 console.log(tokenize("12 + 3 * (4 - 1)"));
-console.log(tokenize("2xt + 5")); // should throw error: numbers cannot be at the start of an identifier
+// console.log(tokenize("2xt + 5")); // should throw error: numbers cannot be at the start of an identifier
 
 // Parser: Tokens -> AST
 
@@ -67,7 +67,7 @@ const createParser = (tokens) => {
     const expect = (type) => {
         const token = peek();
 
-        if (!token || token.type !== tyep) {
+        if (!token || token.type !== type) {
             throw new Error(`Expected token ${type}, got ${token ? token.type : "EOF"}`);
         }
         return consume();
@@ -90,13 +90,18 @@ const parse = (tokens) => {
         return parseAdditive()
     }
 
+    /**
+     * Parses:
+     * - number literals
+     * - grouped expressions in parentheses
+     */
     const parsePrimary = () => {
         const token = parser.peek();
         if (!token) {
             throw new Error("Unexpected end of input");
         }
         if (token.type === "NUMBER") {
-            parse.consume();
+            parser.consume();
 
             return {
                 type: "NumberLiteral",
@@ -105,15 +110,18 @@ const parse = (tokens) => {
         }
 
         if (token.type === "(") {
-            parse.consume();
+            parser.consume();
             const expression = parseExpression();
-            parse.expect(")")
+            parser.expect(")")
             return expression
         }
         throw new Error(`Unexpected token in primary expression: ${token.type}`);
     }
 
-    // + -
+    /**
+ * Parses + and - expressions.
+ * Lower precedence than multiplicative expressions.
+ */
     const parseAdditive = () => {
         let left = parseMultiplicative();
 
@@ -132,7 +140,10 @@ const parse = (tokens) => {
         return left;
     }
 
-    // * /
+    /**
+    * Parses * and / expressions.
+    * Higher precedence than additive expressions.
+    */
     const parseMultiplicative = () => {
         let left = parsePrimary();
 
@@ -158,3 +169,10 @@ const parse = (tokens) => {
     }
     return ast;
 }
+
+// Test
+const input = "2 + 3 * (4 - 1)";
+const tokens = tokenize(input);
+const ast = parse(tokens);
+
+console.log(JSON.stringify(ast, null, 2));
