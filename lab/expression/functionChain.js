@@ -151,5 +151,10 @@ const parse = (tokens) => {
         }
         return left;
     }
-    return parseExpression()
+    const ast = parseExpression();
+
+    if (parser.peek() !== null) {
+        throw new Error(`Unexpected token after expression: ${parser.peek().type}`);
+    }
+    return ast;
 }
