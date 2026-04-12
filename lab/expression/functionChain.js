@@ -15,13 +15,15 @@ const tokenize = (code) => {
         // Next: Numbers
         if (/[0-9]/.test(char)) {
             let value = "";
-            let lookahead = current < code.length - 1 ? code[current + 1] : null;
             while (current < code.length && /[0-9]/.test(code[current])) {
-                if (/[A-Za-z]/.test(lookahead)) {
-                    throw new Error(`Invalid number format at position ${current}: numbers cannot be at the start of an identifier.`);
-                }
+
                 value += code[current];
                 current++;
+            }
+            if (current < code.length && /[A-Za-z_]/.test(code[current])) {
+                throw new Error(
+                    `Invalid number format at position ${current}: numbers cannot be at the start of an identifier.`
+                );
             }
             tokens.push({
                 type: "NUMBER",
@@ -152,7 +154,7 @@ const parse = (tokens) => {
             const op = parser.consume().type;
             const right = parsePrimary();
 
-            return {
+            left = {
                 type: "BinaryExpression",
                 op,
                 left,
