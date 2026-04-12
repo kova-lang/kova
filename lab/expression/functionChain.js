@@ -31,6 +31,23 @@ const tokenize = (code) => {
             })
             continue;
         }
+        // Identifier tokenizer
+
+        if (/[a-zA-Z_]/.test(char)) {
+            let value = "";
+
+            while (current < code.length && /[a-zA-Z0-9_]/.test(code[current])) {
+                value += code[current];
+                current++;
+            }
+
+            tokens.push({
+                type: "IDENTIFIER",
+                value
+            });
+
+            continue;
+        }
 
         // Next: Single character operators and parentheses
         if (["+", "-", "*", "/", "(", ")"].includes(char)) {
@@ -171,7 +188,7 @@ const parse = (tokens) => {
         // keep consuming * and / as long as they appear
         while (parser.peek() && (parser.peek().type === "*" || parser.peek().type === "/")) {
             const op = parser.consume().type;
-            const right = parsePrimary();
+            const right = parseUnary();
 
             left = {
                 type: "BinaryExpression",
