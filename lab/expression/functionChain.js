@@ -119,6 +119,25 @@ const parse = (tokens) => {
         }
         throw new Error(`Unexpected token in primary expression: ${token.type}`);
     }
+    // Parse Unary
+    const parseUnary = () => {
+        const token = parser.peek();
+
+        // Handle unary + and -
+        if (token && (token.type === "+" || token.type === "-")) {
+            const operator = parser.consume().type;
+
+            const argument = parseUnary(); // recursion allows multiple unary ops
+
+            return {
+                type: "UnaryExpression",
+                operator,
+                argument
+            };
+        }
+
+        return parsePrimary();
+    }
 
     /**
  * Parses + and - expressions.
@@ -147,7 +166,7 @@ const parse = (tokens) => {
     * Higher precedence than additive expressions.
     */
     const parseMultiplicative = () => {
-        let left = parsePrimary();
+        let left = parseUnary();
 
         // keep consuming * and / as long as they appear
         while (parser.peek() && (parser.peek().type === "*" || parser.peek().type === "/")) {
@@ -173,12 +192,12 @@ const parse = (tokens) => {
 }
 
 // Test
-const input1 = "2 + 3 * (4 - 1)";
+const input1 = "2 * 3 + 3 * 5 + 2 * (4 - 1)";
 const input2 = "3 + 2 + 5 + 4 + 7 + 7 * 3"
 const tokens1 = tokenize(input1);
 const tokens2 = tokenize(input2);
-const ast1 = parse(tokens1); 
+const ast1 = parse(tokens1);
 const ast2 = parse(tokens2);
 
 console.log(JSON.stringify(ast1, null, 2));
-console.log(JSON.stringify(ast2, null, 2));
+console.log(JSON.stringify(ast2, null, 5)); + 3 * (4 - 1)
