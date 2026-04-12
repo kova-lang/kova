@@ -173,8 +173,12 @@ const parse = (tokens) => {
 }
 
 // Test
-const input = "2 + 3 * (4 - 1)";
-const tokens = tokenize(input);
-const ast = parse(tokens);
+const input1 = "2 + 3 * (4 - 1)";
+const input2 = "3 + 2 + 5 + 4 + 7 + 7 * 3"
+const tokens1 = tokenize(input1);
+const tokens2 = tokenize(input2);
+const ast1 = parse(tokens1); 
+const ast2 = parse(tokens2);
 
-console.log(JSON.stringify(ast, null, 2));
+console.log(JSON.stringify(ast1, null, 2));
+console.log(JSON.stringify(ast2, null, 2));
