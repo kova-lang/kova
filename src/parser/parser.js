@@ -607,6 +607,9 @@ export default class Parser {
         };
     }
 
+    // TODO: add exponentiation operator (**)
+    // Must be parsed as right-associative with higher precedence than * and /
+    
     parseLogicalOr() {
         let left = this.parseLogicalAnd();
         while (this.currentToken.type === "OR") {
