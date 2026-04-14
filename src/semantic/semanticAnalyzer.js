@@ -40,6 +40,14 @@ export default class SemanticAnalyzer {
         this.visit(ast);
         this.exitScope();
     }
+    // visit() delegates to them
+    visitIdentifier(node) {
+        return this.resolve(node.name, node);
+    }
+
+    visitLiteral(node) {
+        return node.value === null ? "null" : typeof node.value;
+    }
     // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
@@ -76,8 +84,9 @@ export default class SemanticAnalyzer {
                 return "function";
             }
 
-            case "Identifier": return this.resolve(node.name, node);
-            case "Literal": return node.value === null ? "null" : typeof node.value;
+            case "Identifier": return this.visitIdentifier(node);
+            case "Literal": return this.visitLiteral(node);
+            
             case "EnvExpression": return "object"; // process.env is an object
 
             case "ArrayExpression":
