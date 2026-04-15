@@ -12,7 +12,7 @@ export default class SemanticAnalyzer {
 
     // #### Prob helpers ####
     Prob(inner) { return { kind: "prob", inner }; }
-    isProb(t) { return t && typeof t === "object" && t.kind === "prob"; }
+    isProb(t) { return t !== null && typeof t === "object" && t.kind === "prob"; }
     unwrapProb(t) { return t.inner; }
 
     // #### Scope helpers ####
