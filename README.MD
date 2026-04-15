@@ -5,10 +5,8 @@ Kova is a lightweight, expressive programming language designed for AI-integrate
 As AI systems become more embedded in backend logic, programs need a way to represent what they do not know. Kova introduces `Prob<T>`, a probabilistic type that wraps every AI call result. You cannot use a `Prob<T>` value in a condition or expression until you explicitly call `resolve()` , making uncertainty a structural property of the program, not a runtime surprise.
 
 Kova is a proof-of-concept that deterministic control flow and probabilistic AI calls can coexist with static guarantees, making AI-driven programs easier to audit, debug, and reason about formally.
----
 
-###
-Info: Made some exmaples, and I am still fleshing out the language spec and writing tests. The README will be updated as the project evolves, but I wanted to get a draft up to share the core ideas and structure. Also, new wave of externals would be added soon. Design is in progress...
+### Info: Made some exmaples, and I am still fleshing out the language spec and writing tests. The README will be updated as the project evolves, but I wanted to get a draft up to share the core ideas and structure. Also, new wave of externals would be added soon. Design is in progress...
 ---
 
 ## Overview
