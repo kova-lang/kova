@@ -1,0 +1,13 @@
+
+// let five:string = 5
+// print(five) // Should throw a type error
+
+let car:string = "Tesla"
+print(car)
+
+let isProb:boolean = false
+print(isProb)
+
+let box = null
+
+print(box)
