@@ -299,6 +299,19 @@ export default class SemanticAnalyzer {
         }
         return "object";
     }
+    visitImportStatement(node) {
+        node.specifiers.forEach(spec => {
+            try { this.declare(spec, "unknown"); } catch (_) { }
+        });
+        if (node.defaultImport) {
+            try { this.declare(node.defaultImport, "unknown"); } catch (_) { }
+        }
+        return null;
+    }
+
+    visitExportStatement(node) {
+        return this.visit(node.declaration);
+    }
     // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
@@ -378,14 +391,10 @@ export default class SemanticAnalyzer {
             case "InsertStatement": return this.visitInsertStatement(node);
 
             case "UpdateStatement": return this.visitUpdateStatement(node);
-            
-            // #### Imports ####
-            case "ImportStatement":
-                node.specifiers.forEach(spec => { try { this.declare(spec, "unknown"); } catch (_) { } });
-                if (node.defaultImport) { try { this.declare(node.defaultImport, "unknown"); } catch (_) { } }
-                return null;
 
-            case "ExportStatement": return this.visit(node.declaration);
+            // #### Imports && Exports ####
+            case "ImportStatement": return this.visitImportStatement(node)
+            case "ExportStatement": return this.visitExportStatement(node)
 
             // #### Functions ####
             case "CallExpression": return this.visitCallExpression(node);
