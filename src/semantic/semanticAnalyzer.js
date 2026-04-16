@@ -48,6 +48,70 @@ export default class SemanticAnalyzer {
     visitLiteral(node) {
         return node.value === null ? "null" : typeof node.value;
     }
+    // visit binary operation num op num --- with special case for concatenation: 
+    visitBinaryExpression(node) {
+        const L = this.visit(node.left);
+        const R = this.visit(node.right);
+        const op = node.operator;
+
+        if (this.isProb(L) || this.isProb(R))
+            this.error("Probabilistic values must be resolved before use", node);
+
+        if (["+", "-", "*", "/", "%"].includes(op)) {
+            if (op === "+" && L === "string" && R === "string") return "string";
+            if (L !== "unknown" && R !== "unknown" && (L !== "number" || R !== "number"))
+                this.error(`Arithmetic operators require numbers, got ${L} and ${R}`, node);
+            return "number";
+        }
+        if ([">", "<", ">=", "<="].includes(op)) {
+            if (L !== "unknown" && R !== "unknown" && (L !== "number" || R !== "number"))
+                this.error("Comparison operators require numbers", node);
+            return "boolean";
+        }
+        if (["==", "!="].includes(op)) {
+            if (L !== R && L !== "unknown" && R !== "unknown")
+                this.error(`Equality operands must be the same type, got ${L} and ${R}`, node);
+            return "boolean";
+        }
+        if (["&&", "||"].includes(op)) {
+            if (L !== "boolean" || R !== "boolean")
+                this.error("Logical operators require booleans", node);
+            return "boolean";
+        }
+        this.error(`Unknown operator "${op}"`, node);
+    }
+    // visit unary expression
+    visitUnaryExpression(node) {
+        const argType = this.visit(node.argument);
+        if (this.isProb(argType))
+            this.error("Probabilistic values must be resolved before use", node);
+        if (node.operator === "-" && argType !== "number" && argType !== "unknown")
+            this.error("Unary '-' requires a number", node);
+        if (node.operator === "!" && argType !== "boolean" && argType !== "unknown")
+            this.error("Unary '!' requires a boolean", node);
+        return argType;
+    }
+    //  Analyze a branch of an if-statement, which could be either a block or a single statement. Return the type of any return statement found.
+    analyzeBranch(node) {
+        if (!node) return null;
+        if (node.type === "BlockStatement") {
+            let returnType = null;
+            this.enterScope();
+            for (const stmt of node.body) {
+                if (stmt.type === "ReturnStatement") {
+                    const t = this.visit(stmt);
+                    if (!returnType) returnType = t;
+                    else if (returnType !== t) this.error(`Inconsistent return types: ${returnType} vs ${t}`, node);
+                } else {
+                    this.visit(stmt);
+                }
+            }
+            this.exitScope();
+            return returnType;
+        }
+        if (node.type === "IfStatement") return this.visit(node);
+        return this.visit(node);
+    }
     // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
@@ -86,7 +150,7 @@ export default class SemanticAnalyzer {
 
             case "Identifier": return this.visitIdentifier(node);
             case "Literal": return this.visitLiteral(node);
-            
+
             case "EnvExpression": return "object"; // process.env is an object
 
             case "ArrayExpression":
@@ -105,47 +169,10 @@ export default class SemanticAnalyzer {
                 return "unknown";
             }
 
-            case "BinaryExpression": {
-                const L = this.visit(node.left);
-                const R = this.visit(node.right);
-                const op = node.operator;
+            case "BinaryExpression": return this.visitBinaryExpression(node);
 
-                if (this.isProb(L) || this.isProb(R)) this.error("Probabilistic values must be resolved before use", node);
+            case "UnaryExpression": return this.visitUnaryExpression(node);
 
-                if (["+", "-", "*", "/", "%"].includes(op)) {
-                    if (op === "+" && L === "string" && R === "string") return "string";
-                    if (L !== "unknown" && R !== "unknown" && (L !== "number" || R !== "number")) {
-                        this.error(`Arithmetic operators require numbers, got ${L} and ${R}`, node);
-                    }
-                    return "number";
-                }
-                if ([">", "<", ">=", "<="].includes(op)) {
-                    if (L !== "unknown" && R !== "unknown" && (L !== "number" || R !== "number")) {
-                        this.error(`Comparison operators require numbers`, node);
-                    }
-                    return "boolean";
-                }
-                if (["==", "!="].includes(op)) {
-                    if (L !== R && L !== "unknown" && R !== "unknown") {
-                        this.error(`Equality operands must be the same type, got ${L} and ${R}`, node);
-                    }
-                    return "boolean";
-                }
-                if (["&&", "||"].includes(op)) {
-                    if (L !== "boolean" || R !== "boolean") this.error(`Logical operators require booleans`, node);
-                    return "boolean";
-                }
-                this.error(`Unknown operator "${op}"`, node);
-                break;
-            }
-
-            case "UnaryExpression": {
-                const argType = this.visit(node.argument);
-                if (this.isProb(argType)) this.error("Probabilistic values must be resolved before use", node);
-                if (node.operator === "-" && argType !== "number" && argType !== "unknown") this.error("Unary '-' requires a number", node);
-                if (node.operator === "!" && argType !== "boolean" && argType !== "unknown") this.error("Unary '!' requires a boolean", node);
-                return argType;
-            }
 
             case "IfStatement": {
                 const testType = this.visit(node.test);
@@ -326,27 +353,7 @@ export default class SemanticAnalyzer {
         }
         return null;
     }
-    //  Analyze a branch of an if-statement, which could be either a block or a single statement. Return the type of any return statement found.
-    analyzeBranch(node) {
-        if (!node) return null;
-        if (node.type === "BlockStatement") {
-            let returnType = null;
-            this.enterScope();
-            for (const stmt of node.body) {
-                if (stmt.type === "ReturnStatement") {
-                    const t = this.visit(stmt);
-                    if (!returnType) returnType = t;
-                    else if (returnType !== t) this.error(`Inconsistent return types: ${returnType} vs ${t}`, node);
-                } else {
-                    this.visit(stmt);
-                }
-            }
-            this.exitScope();
-            return returnType;
-        }
-        if (node.type === "IfStatement") return this.visit(node);
-        return this.visit(node);
-    }
+
 
     error(message, node) {
         throw new Diagnostic(message, node, this.source);
