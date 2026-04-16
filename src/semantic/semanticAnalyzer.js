@@ -243,6 +243,28 @@ export default class SemanticAnalyzer {
         this.exitScope();
         return null;
     }
+
+    visitHttpStatement(node) {
+        this.visit(node.url);
+        if (node.body) this.visit(node.body);
+        if (node.headers) this.visit(node.headers);
+        if (node.binding) {
+            try { this.declare(node.binding.name, "object"); } catch (_) { }
+        }
+        return null;
+    }
+
+    visitHttpExpression(node) {
+        this.visit(node.url);
+        if (node.body) this.visit(node.body);
+        if (node.headers) this.visit(node.headers);
+        return "object";
+    }
+
+    visitRespondStatement(node) {
+        this.visit(node.value);
+        return null;
+    }
     // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
@@ -307,28 +329,12 @@ export default class SemanticAnalyzer {
             case "ExpressionStatement": return this.visit(node.expression);
 
             // #### HTTP ####
-            case "HttpStatement": {
-                this.visit(node.url);
-                if (node.body) this.visit(node.body);
-                if (node.headers) this.visit(node.headers);
-                // Bind result variable into scope
-                if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) { }
-                }
-                return null;
-            }
+            case "HttpStatement": return this.visitHttpStatement(node);
 
-            case "HttpExpression": {
-                this.visit(node.url);
-                if (node.body) this.visit(node.body);
-                if (node.headers) this.visit(node.headers);
-                return "object";
-            }
+            case "HttpExpression": return this.visitHttpExpression(node);
 
             // #### respond ####
-            case "RespondStatement":
-                this.visit(node.value);
-                return null;
+            case "RespondStatement": return this.visitRespondStatement(node);
 
             // #### DB ####
             case "ConnectStatement":
