@@ -191,19 +191,19 @@ export default class SemanticAnalyzer {
 
         // for member expressions like foo.name()
         if (node.callee.type === "MemberExpression") {
-            let calleeType = this.visit(node.callee);
-        if (node.callee.type === "MemberExpression") {
             this.visit(node.callee.object);
             if (node.callee.computed) this.visit(node.callee.property);
             node.arguments.forEach(a => this.visit(a));
             return "unknown";
         }
 
+        // for non-identifier callees like immediately-invoked arrow functions
         if (node.callee.type !== "Identifier") {
             this.visit(node.callee);
             node.arguments.forEach(a => this.visit(a));
             return "unknown";
         }
+
         const fnName = node.callee.name;
 
         // Special function to resolve prob type calls
