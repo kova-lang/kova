@@ -253,8 +253,6 @@ export default class SemanticAnalyzer {
             this.exitScope();
             return returnType;
         }
-        if (node.type === "IfStatement") return this.visit(node);
-        return this.visit(node);
     }
     // scan the if statements and the return types matches
     visitIfStatement(node) {
