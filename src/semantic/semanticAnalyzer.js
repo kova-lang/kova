@@ -40,6 +40,53 @@ export default class SemanticAnalyzer {
         this.visit(ast);
         this.exitScope();
     }
+
+    // Visit the program node, basically an array of statements. The initial scope initiator.
+    visitProgram(node) {
+        node.body.forEach(s => this.visit(s));
+        return null;
+    }
+
+    // Env exp only return the object type
+    visitEnvExpression(_node) { return "object"; }
+
+    // Scan through the array for its elements and return an array type
+    visitArrayExpression(node) {
+        node.elements.forEach(el => this.visit(el));
+        return "array";
+    }
+
+    // Scan through an object properties, an array objects 
+    visitObjectExpression(node) {
+        node.properties.forEach(p => this.visit(p.value));
+        return "object";
+    }
+
+    // member expressions 
+    visitMemberExpression(node) {
+        const objType = this.visit(node.object);
+        if (!["object", "array", "string", "external", "unknown"].includes(objType))
+            this.error(`Cannot access property on type "${objType}"`, node);
+        return "unknown";
+    }
+
+    // {... statements} scan
+    visitBlockStatement(node) {
+        this.enterScope();
+        node.body.forEach(s => this.visit(s));
+        this.exitScope();
+        return null;
+    }
+
+    visitReturnStatement(node) {
+        const t = this.visit(node.argument);
+        this.currentReturnType = t;
+        return t;
+    }
+
+    visitExpressionStatement(node) {
+        return this.visit(node.expression);
+    }
     // visit() delegates to them
     visitIdentifier(node) {
         return this.resolve(node.name, node);
@@ -318,9 +365,7 @@ export default class SemanticAnalyzer {
 
         switch (node.type) {
 
-            case "Program":
-                node.body.forEach(s => this.visit(s));
-                return null;
+            case "Program": return this.visitProgram(node);
 
             case "VariableDeclaration": return this.visitVariableDeclaration(node);
 
@@ -330,23 +375,13 @@ export default class SemanticAnalyzer {
 
             case "Literal": return this.visitLiteral(node);
 
-            case "EnvExpression": return "object"; // process.env is an object
+            case "EnvExpression": return this.visitEnvExpression(node); // process.env is an object
 
-            case "ArrayExpression":
-                node.elements.forEach(el => this.visit(el));
-                return "array";
+            case "ArrayExpression": return this.visitArrayExpression(node);
 
-            case "ObjectExpression":
-                node.properties.forEach(p => this.visit(p.value));
-                return "object";
+            case "ObjectExpression": return this.visitObjectExpression(node);
 
-            case "MemberExpression": {
-                const objType = this.visit(node.object);
-                if (!["object", "array", "string", "external", "unknown"].includes(objType)) {
-                    this.error(`Cannot access property on type "${objType}"`, node);
-                }
-                return "unknown";
-            }
+            case "MemberExpression": return this.visitMemberExpression(node);
 
             case "BinaryExpression": return this.visitBinaryExpression(node);
 
@@ -359,21 +394,13 @@ export default class SemanticAnalyzer {
 
             case "ForStatement": return this.visitForStatement(node);
 
-            case "BlockStatement":
-                this.enterScope();
-                node.body.forEach(s => this.visit(s));
-                this.exitScope();
-                return null;
+            case "BlockStatement": return this.visitBlockStatement(node);
 
-            case "ReturnStatement": {
-                const t = this.visit(node.argument);
-                this.currentReturnType = t;
-                return t;
-            }
+            case "ReturnStatement": return this.visitReturnStatement(node);
 
             case "AssignmentExpression": return this.visitAssignmentExpression(node);
 
-            case "ExpressionStatement": return this.visit(node.expression);
+            case "ExpressionStatement": return this.visitExpressionStatement(node);
 
             // #### HTTP ####
             case "HttpStatement": return this.visitHttpStatement(node);
