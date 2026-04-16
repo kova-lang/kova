@@ -65,6 +65,7 @@ export default class SemanticAnalyzer {
     // member expressions 
     visitMemberExpression(node) {
         const objType = this.visit(node.object);
+        if (node.computed && node.property) this.visit(node.property);
         if (!["object", "array", "string", "external", "unknown"].includes(objType))
             this.error(`Cannot access property on type "${objType}"`, node);
         return "unknown";
@@ -191,8 +192,7 @@ export default class SemanticAnalyzer {
 
         // for member expressions like foo.name()
         if (node.callee.type === "MemberExpression") {
-            this.visit(node.callee.object);
-            if (node.callee.computed) this.visit(node.callee.property);
+            this.visit(node.callee);
             node.arguments.forEach(a => this.visit(a));
             return "unknown";
         }
