@@ -14,6 +14,7 @@ export default class SemanticAnalyzer {
     Prob(inner) { return { kind: "prob", inner }; }
     isProb(t) { return t !== null && typeof t === "object" && t.kind === "prob"; }
     unwrapProb(t) { return t.inner; }
+    typeToString(t) { return this.isProb(t) ? `Prob<${t.inner}>` : String(t); }
 
     // #### Scope helpers ####
     enterScope() { this.scopes.push(new Map()); }
@@ -108,7 +109,7 @@ export default class SemanticAnalyzer {
         if (["+", "-", "*", "/", "%"].includes(op)) {
             if (op === "+" && L === "string" && R === "string") return "string";
             if (L !== "unknown" && R !== "unknown" && (L !== "number" || R !== "number"))
-                this.error(`Arithmetic operators require numbers, got ${L} and ${R}`, node);
+                this.error(`Arithmetic operators require numbers, got ${this.typeToString(L)} and ${this.typeToString(R)}`, node);
             return "number";
         }
         if ([">", "<", ">=", "<="].includes(op)) {
@@ -118,7 +119,7 @@ export default class SemanticAnalyzer {
         }
         if (["==", "!="].includes(op)) {
             if (L !== R && L !== "unknown" && R !== "unknown")
-                this.error(`Equality operands must be the same type, got ${L} and ${R}`, node);
+                this.error(`Equality operands must be the same type, got ${this.typeToString(L)} and ${this.typeToString(R)}`, node);
             return "boolean";
         }
         if (["&&", "||"].includes(op)) {
@@ -152,7 +153,7 @@ export default class SemanticAnalyzer {
         this.declare(node.id.name, "unknown");
         const t = this.visit(node.init);
         if (node.typeAnnotation && t !== node.typeAnnotation && t !== "unknown")
-            this.error(`Type mismatch: declared ${node.typeAnnotation} but got ${t}`, node);
+            this.error(`Type mismatch: declared ${node.typeAnnotation} but got ${this.typeToString(t)}`, node);
         this.scopes[this.scopes.length - 1].set(node.id.name, t);
         return t;
     }
@@ -174,7 +175,7 @@ export default class SemanticAnalyzer {
         this.currentReturnType = null;
         node.body.body.forEach(s => this.visit(s));
         if (node.returnType && this.currentReturnType && node.returnType !== this.currentReturnType)
-            this.error(`Function "${node.name.name}" declared return type ${node.returnType} but returns ${this.currentReturnType}`, node);
+            this.error(`Function "${node.name.name}" declared return type ${node.returnType} but returns ${this.typeToString(this.currentReturnType)}`, node);
         this.currentReturnType = prevReturn;
         this.exitScope();
         return "function";
@@ -243,7 +244,7 @@ export default class SemanticAnalyzer {
             node.arguments.forEach((arg, i) => {
                 const t = this.visit(arg);
                 if (sig.params[i] !== "any" && t !== sig.params[i] && t !== "unknown")
-                    this.error(`Argument ${i + 1} of "${fnName}" must be ${sig.params[i]}, got ${t}`, node);
+                    this.error(`Argument ${i + 1} of "${fnName}" must be ${sig.params[i]}, got ${this.typeToString(t)}`, node);
             });
             if (fnName === "AI") return this.Prob(sig.returns);
             return sig.returns;
@@ -262,7 +263,7 @@ export default class SemanticAnalyzer {
                 if (stmt.type === "ReturnStatement") {
                     const t = this.visit(stmt);
                     if (!returnType) returnType = t;
-                    else if (returnType !== t) this.error(`Inconsistent return types: ${returnType} vs ${t}`, node);
+                    else if (returnType !== t) this.error(`Inconsistent return types: ${this.typeToString(returnType)} vs ${this.typeToString(t)}`, node);
                 } else {
                     this.visit(stmt);
                 }
@@ -282,7 +283,7 @@ export default class SemanticAnalyzer {
         const consReturn = this.analyzeBranch(node.consequent);
         const altReturn = node.alternate ? this.analyzeBranch(node.alternate) : null;
         if (consReturn && altReturn && consReturn !== altReturn)
-            this.error(`Mismatched return types: ${consReturn} vs ${altReturn}`, node);
+            this.error(`Mismatched return types: ${this.typeToString(consReturn)} vs ${this.typeToString(altReturn)}`, node);
         return consReturn ?? altReturn ?? null;
     }
 
