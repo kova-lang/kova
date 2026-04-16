@@ -132,13 +132,20 @@ export default class SemanticAnalyzer {
         const argType = this.visit(node.argument);
         if (this.isProb(argType))
             this.error("Probabilistic values must be resolved before use", node);
-        if (node.operator === "-" && argType !== "number" && argType !== "unknown")
-            this.error("Unary '-' requires a number", node);
-        if (node.operator === "!" && argType !== "boolean" && argType !== "unknown")
-            this.error("Unary '!' requires a boolean", node);
-        return argType;
+        
+        if (node.operator === "-") {
+            if (argType !== "number" && argType !== "unknown")
+                this.error("Unary '-' requires a number", node);
+            return "number";
+        }
+        if (node.operator === "!") {
+            if (argType !== "boolean" && argType !== "unknown")
+                this.error("Unary '!' requires a boolean", node);
+            return "boolean";
+        }
+        this.error(`Unknown unary operator "${node.operator}"`, node);
     }
-    // viist the variable declaration node and check if it already declared and decide to save or not.
+    // visit the variable declaration node and check if it already declared and decide to save or not.
     visitVariableDeclaration(node) {
         this.declare(node.id.name, "unknown");
         const t = this.visit(node.init);
