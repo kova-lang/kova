@@ -78,6 +78,14 @@ test("for sum",   () => eq(runKovaSync(`let arr = [1,2,3,4,5]\nlet s = 0\nfor x 
 test("for range", () => eq(runKovaSync(`let s = 0\nfor x in range(0,5) { s += x }\nreturn s`).returnValue, 10));
 
 
+// #### Control Flow / If-Else ####
+console.log("\n Control Flow / If-Else");
+test("if else basic",       () => eq(runKovaSync(`let x = 5\nif x > 3 { return 1 } else { return 0 }`).returnValue, 1));
+test("else if taken",       () => eq(runKovaSync(`let x = 5\nif x > 10 { return 2 } else if x > 3 { return 1 } else { return 0 }`).returnValue, 1));
+test("else if not taken",   () => eq(runKovaSync(`let x = 1\nif x > 10 { return 2 } else if x > 3 { return 1 } else { return 0 }`).returnValue, 0));
+test("else if catches semantic error", () => assertThrows(() => runKovaSync(`let x = 5\nif x > 10 { return 2 } else if x > 3 { let y = undeclaredVar } else { return 0 }`), "Undeclar"));
+
+
 // #### Functions ####
 console.log("\n Functions");
 test("basic fn",  () => eq(runKovaSync(`fn add(a, b) { return a + b }\nreturn add(3, 4)`).returnValue, 7));
