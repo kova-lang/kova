@@ -265,6 +265,40 @@ export default class SemanticAnalyzer {
         this.visit(node.value);
         return null;
     }
+    visitConnectStatement(node) {
+        this.visit(node.config);
+        if (node.binding) {
+            try { this.declare(node.binding.name, "object"); } catch (_) { }
+        }
+        try { this.declare(node.driver, "object"); } catch (_) { }
+        return "object";
+    }
+
+    visitFindStatement(node) {
+        if (node.filter) this.visit(node.filter);
+        if (node.limit) this.visit(node.limit);
+        if (node.binding) {
+            try { this.declare(node.binding.name, "array"); } catch (_) { }
+        }
+        return "array";
+    }
+
+    visitInsertStatement(node) {
+        this.visit(node.document);
+        if (node.binding) {
+            try { this.declare(node.binding.name, "object"); } catch (_) { }
+        }
+        return "object";
+    }
+
+    visitUpdateStatement(node) {
+        this.visit(node.updates);
+        if (node.filter) this.visit(node.filter);
+        if (node.binding) {
+            try { this.declare(node.binding.name, "object"); } catch (_) { }
+        }
+        return "object";
+    }
     // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
@@ -333,42 +367,18 @@ export default class SemanticAnalyzer {
 
             case "HttpExpression": return this.visitHttpExpression(node);
 
-            // #### respond ####
+            // #### HTTP - respond ####
             case "RespondStatement": return this.visitRespondStatement(node);
 
-            // #### DB ####
-            case "ConnectStatement":
-                this.visit(node.config);
-                if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) { }
-                }
-                // Also declare the driver name as default connection variable
-                try { this.declare(node.driver, "object"); } catch (_) { }
-                return "object";
+            // #### DB Statements ####
+            case "ConnectStatement": return this.visitConnectStatement(node);
 
-            case "FindStatement":
-                if (node.filter) this.visit(node.filter);
-                if (node.limit) this.visit(node.limit);
-                if (node.binding) {
-                    try { this.declare(node.binding.name, "array"); } catch (_) { }
-                }
-                return "array";
+            case "FindStatement": return this.visitFindStatement(node);
 
-            case "InsertStatement":
-                this.visit(node.document);
-                if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) { }
-                }
-                return "object";
+            case "InsertStatement": return this.visitInsertStatement(node);
 
-            case "UpdateStatement":
-                this.visit(node.updates);
-                if (node.filter) this.visit(node.filter);
-                if (node.binding) {
-                    try { this.declare(node.binding.name, "object"); } catch (_) { }
-                }
-                return "object";
-
+            case "UpdateStatement": return this.visitUpdateStatement(node);
+            
             // #### Imports ####
             case "ImportStatement":
                 node.specifiers.forEach(spec => { try { this.declare(spec, "unknown"); } catch (_) { } });
