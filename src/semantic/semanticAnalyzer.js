@@ -209,6 +209,40 @@ export default class SemanticAnalyzer {
         if (node.type === "IfStatement") return this.visit(node);
         return this.visit(node);
     }
+    // scan the if statements and the return types matches
+    visitIfStatement(node) {
+        const testType = this.visit(node.test);
+        if (this.isProb(testType))
+            this.error("Probabilistic value cannot be used in 'if' condition. Use resolve().", node.test);
+        if (testType !== "boolean" && testType !== "unknown")
+            this.error(`If condition must be boolean, got "${testType}"`, node);
+        const consReturn = this.analyzeBranch(node.consequent);
+        const altReturn = node.alternate ? this.analyzeBranch(node.alternate) : null;
+        if (consReturn && altReturn && consReturn !== altReturn)
+            this.error(`Mismatched return types: ${consReturn} vs ${altReturn}`, node);
+        return consReturn ?? altReturn ?? null;
+    }
+
+    visitWhileStatement(node) {
+        const testType = this.visit(node.test);
+        if (testType !== "boolean" && testType !== "unknown")
+            this.error(`While condition must be boolean, got "${testType}"`, node);
+        this.enterScope();
+        node.body.body.forEach(s => this.visit(s));
+        this.exitScope();
+        return null;
+    }
+
+    visitForStatement(node) {
+        this.enterScope();
+        const iterType = this.visit(node.iterable);
+        if (iterType !== "array" && iterType !== "unknown")
+            this.error(`For..in requires an array, got "${iterType}"`, node);
+        this.declare(node.id.name, "unknown");
+        node.body.body.forEach(s => this.visit(s));
+        this.exitScope();
+        return null;
+    }
     // Recursively visit AST nodes and perform type-checking and semantic analysis
     visit(node) {
         if (!node) return null;
@@ -250,34 +284,11 @@ export default class SemanticAnalyzer {
             case "UnaryExpression": return this.visitUnaryExpression(node);
 
 
-            case "IfStatement": {
-                const testType = this.visit(node.test);
-                if (this.isProb(testType)) this.error("Probabilistic value cannot be used in 'if' condition. Use resolve().", node.test);
-                if (testType !== "boolean" && testType !== "unknown") this.error(`If condition must be boolean, got "${testType}"`, node);
-                const consReturn = this.analyzeBranch(node.consequent);
-                const altReturn = node.alternate ? this.analyzeBranch(node.alternate) : null;
-                if (consReturn && altReturn && consReturn !== altReturn) this.error(`Mismatched return types: ${consReturn} vs ${altReturn}`, node);
-                return consReturn ?? altReturn ?? null;
-            }
+            case "IfStatement": return this.visitIfStatement(node);
 
-            case "WhileStatement": {
-                const testType = this.visit(node.test);
-                if (testType !== "boolean" && testType !== "unknown") this.error(`While condition must be boolean, got "${testType}"`, node);
-                this.enterScope();
-                node.body.body.forEach(s => this.visit(s));
-                this.exitScope();
-                return null;
-            }
+            case "WhileStatement": return this.visitWhileStatement(node);
 
-            case "ForStatement": {
-                this.enterScope();
-                const iterType = this.visit(node.iterable);
-                if (iterType !== "array" && iterType !== "unknown") this.error(`For..in requires an array, got "${iterType}"`, node);
-                this.declare(node.id.name, "unknown");
-                node.body.body.forEach(s => this.visit(s));
-                this.exitScope();
-                return null;
-            }
+            case "ForStatement": return this.visitForStatement(node);
 
             case "BlockStatement":
                 this.enterScope();
