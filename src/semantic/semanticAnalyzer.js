@@ -107,6 +107,87 @@ export default class SemanticAnalyzer {
         this.visit(node.right);
         return "unknown";
     }
+
+    // Function declarations
+    visitFunctionDeclaration(node) {
+        this.functions[node.name.name] = node.returnType ?? "unknown";
+        this.declare(node.name.name, "function");
+        this.enterScope();
+        node.params.forEach(p => this.declare(p.name, p.typeAnnotation ?? "unknown"));
+        const prevReturn = this.currentReturnType;
+        this.currentReturnType = null;
+        node.body.body.forEach(s => this.visit(s));
+        if (node.returnType && this.currentReturnType && node.returnType !== this.currentReturnType)
+            this.error(`Function "${node.name.name}" declared return type ${node.returnType} but returns ${this.currentReturnType}`, node);
+        this.currentReturnType = prevReturn;
+        this.exitScope();
+        return "function";
+    }
+
+    visitArrowFunction(node) {
+        this.enterScope();
+        node.params.forEach(p => this.declare(p.name, p.typeAnnotation ?? "unknown"));
+        this.visit(node.body);
+        this.exitScope();
+        return "function";
+    }
+
+    // complex 4-sub-cases function call expressions
+    visitCallExpression(node) {
+
+        // for member expressions like foo.name()
+        if (node.callee.type === "MemberExpression") {
+            node.arguments.forEach(a => this.visit(a));
+            return "unknown";
+        }
+
+        const fnName = node.callee.name;
+
+        // Special function to resolve prob type calls
+        if (fnName === "resolve") {
+            if (node.arguments.length !== 1)
+                this.error("resolve() takes exactly one argument", node);
+            const argType = this.visit(node.arguments[0]);
+            if (!this.isProb(argType))
+                this.error("resolve() expects a probabilistic value", node);
+            return this.unwrapProb(argType);
+        }
+        // Kova built-in functions
+        const BUILTINS = {
+            print: "null", len: "number", push: "null", pop: "unknown",
+            keys: "array", values: "array", toString: "string",
+            toNumber: "number", typeOf: "string", range: "array", resolve: "unknown"
+        };
+        if (Object.prototype.hasOwnProperty.call(BUILTINS, fnName)) {
+            node.arguments.forEach(a => this.visit(a));
+            return BUILTINS[fnName];
+        }
+
+        if (this.functions[fnName]) {
+            node.arguments.forEach(a => this.visit(a));
+            return this.functions[fnName];
+        }
+
+        // If you call function not also in the externals, then the function never existed
+        if (!Object.prototype.hasOwnProperty.call(this.externals, fnName))
+            this.error(`Unknown function "${fnName}"`, node);
+
+        const sig = this.externalSignatures[fnName];
+        if (sig) {
+            if (node.arguments.length !== sig.params.length)
+                this.error(`Invalid argument count for "${fnName}": expected ${sig.params.length}, got ${node.arguments.length}`, node);
+            node.arguments.forEach((arg, i) => {
+                const t = this.visit(arg);
+                if (sig.params[i] !== "any" && t !== sig.params[i] && t !== "unknown")
+                    this.error(`Argument ${i + 1} of "${fnName}" must be ${sig.params[i]}, got ${t}`, node);
+            });
+            if (fnName === "AI") return this.Prob(sig.returns);
+            return sig.returns;
+        }
+
+        node.arguments.forEach(a => this.visit(a));
+        return "unknown";
+    }
     //  Analyze a branch of an if-statement, which could be either a block or a single statement. Return the type of any return statement found.
     analyzeBranch(node) {
         if (!node) return null;
@@ -140,23 +221,10 @@ export default class SemanticAnalyzer {
 
             case "VariableDeclaration": return this.visitVariableDeclaration(node);
 
-            case "FunctionDeclaration": {
-                this.functions[node.name.name] = node.returnType ?? "unknown";
-                this.declare(node.name.name, "function");
-                this.enterScope();
-                node.params.forEach(p => this.declare(p.name, p.typeAnnotation ?? "unknown"));
-                const prevReturn = this.currentReturnType;
-                this.currentReturnType = null;
-                node.body.body.forEach(s => this.visit(s));
-                if (node.returnType && this.currentReturnType && node.returnType !== this.currentReturnType) {
-                    this.error(`Function "${node.name.name}" declared return type ${node.returnType} but returns ${this.currentReturnType}`, node);
-                }
-                this.currentReturnType = prevReturn;
-                this.exitScope();
-                return "function";
-            }
+            case "FunctionDeclaration": return this.visitFunctionDeclaration(node);
 
             case "Identifier": return this.visitIdentifier(node);
+
             case "Literal": return this.visitLiteral(node);
 
             case "EnvExpression": return "object"; // process.env is an object
@@ -293,64 +361,9 @@ export default class SemanticAnalyzer {
             case "ExportStatement": return this.visit(node.declaration);
 
             // #### Functions ####
-            case "CallExpression": {
-                if (node.callee.type === "MemberExpression") {
-                    node.arguments.forEach(a => this.visit(a));
-                    return "unknown";
-                }
+            case "CallExpression": return this.visitCallExpression(node);
 
-                const fnName = node.callee.name;
-
-                if (fnName === "resolve") {
-                    if (node.arguments.length !== 1) this.error("resolve() takes exactly one argument", node);
-                    const argType = this.visit(node.arguments[0]);
-                    if (!this.isProb(argType)) this.error("resolve() expects a probabilistic value", node);
-                    return this.unwrapProb(argType);
-                }
-
-                // Core built-ins
-                const BUILTINS = { print: "null", len: "number", push: "null", pop: "unknown", keys: "array", values: "array", toString: "string", toNumber: "number", typeOf: "string", range: "array", resolve: "unknown" };
-                if (Object.prototype.hasOwnProperty.call(BUILTINS, fnName)) {
-                    node.arguments.forEach(a => this.visit(a));
-                    return BUILTINS[fnName];
-                }
-
-                // User-declared function
-                if (this.functions[fnName]) {
-                    node.arguments.forEach(a => this.visit(a));
-                    return this.functions[fnName];
-                }
-
-                // External
-                if (!Object.prototype.hasOwnProperty.call(this.externals, fnName)) {
-                    this.error(`Unknown function "${fnName}"`, node);
-                }
-
-                const sig = this.externalSignatures[fnName];
-                if (sig) {
-                    if (node.arguments.length !== sig.params.length) {
-                        this.error(`Invalid argument count for "${fnName}": expected ${sig.params.length}, got ${node.arguments.length}`, node);
-                    }
-                    node.arguments.forEach((arg, i) => {
-                        const t = this.visit(arg);
-                        if (sig.params[i] !== "any" && t !== sig.params[i] && t !== "unknown") {
-                            this.error(`Argument ${i + 1} of "${fnName}" must be ${sig.params[i]}, got ${t}`, node);
-                        }
-                    });
-                    if (fnName === "AI") return this.Prob(sig.returns);
-                    return sig.returns;
-                }
-
-                node.arguments.forEach(a => this.visit(a));
-                return "unknown";
-            }
-
-            case "ArrowFunction":
-                this.enterScope();
-                node.params.forEach(p => this.declare(p.name, p.typeAnnotation ?? "unknown"));
-                this.visit(node.body);
-                this.exitScope();
-                return "function";
+            case "ArrowFunction": return this.visitArrowFunction(node);
 
             default:
                 break;
