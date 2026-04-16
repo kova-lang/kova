@@ -191,6 +191,8 @@ export default class SemanticAnalyzer {
 
         // for member expressions like foo.name()
         if (node.callee.type === "MemberExpression") {
+            let calleeType = this.visit(node.callee);
+
             node.arguments.forEach(a => this.visit(a));
             return "unknown";
         }
@@ -222,7 +224,7 @@ export default class SemanticAnalyzer {
             return this.functions[fnName];
         }
 
-        // If you call function not also in the externals, then the function never existed
+        // If you call function not also in the externals, then the function  was never declared
         if (!Object.prototype.hasOwnProperty.call(this.externals, fnName))
             this.error(`Unknown function "${fnName}"`, node);
 
@@ -425,8 +427,8 @@ export default class SemanticAnalyzer {
             case "UpdateStatement": return this.visitUpdateStatement(node);
 
             // #### Imports && Exports ####
-            case "ImportStatement": return this.visitImportStatement(node)
-            case "ExportStatement": return this.visitExportStatement(node)
+            case "ImportStatement": return this.visitImportStatement(node);
+            case "ExportStatement": return this.visitExportStatement(node);
 
             // #### Functions ####
             case "CallExpression": return this.visitCallExpression(node);
