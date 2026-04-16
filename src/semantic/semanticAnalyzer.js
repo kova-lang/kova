@@ -121,8 +121,8 @@ export default class SemanticAnalyzer {
             return "boolean";
         }
         if (["&&", "||"].includes(op)) {
-            if (L !== "boolean" || R !== "boolean")
-                this.error("Logical operators require booleans", node);
+            if ((L !== "boolean" && L !== "unknown") || (R !== "boolean" && R !== "unknown"))
+            this.error("Logical operators require booleans", node);
             return "boolean";
         }
         this.error(`Unknown operator "${op}"`, node);
