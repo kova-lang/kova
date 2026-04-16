@@ -91,6 +91,22 @@ export default class SemanticAnalyzer {
             this.error("Unary '!' requires a boolean", node);
         return argType;
     }
+    // viist the variable declaration node and check if it already declared and decide to save or not.
+    visitVariableDeclaration(node) {
+        this.declare(node.id.name, "unknown");
+        const t = this.visit(node.init);
+        if (node.typeAnnotation && t !== node.typeAnnotation && t !== "unknown")
+            this.error(`Type mismatch: declared ${node.typeAnnotation} but got ${t}`, node);
+        this.scopes[this.scopes.length - 1].set(node.id.name, t);
+        return t;
+    }
+
+    // scans the tree
+    visitAssignmentExpression(node) {
+        this.visit(node.left);
+        this.visit(node.right);
+        return "unknown";
+    }
     //  Analyze a branch of an if-statement, which could be either a block or a single statement. Return the type of any return statement found.
     analyzeBranch(node) {
         if (!node) return null;
@@ -122,15 +138,7 @@ export default class SemanticAnalyzer {
                 node.body.forEach(s => this.visit(s));
                 return null;
 
-            case "VariableDeclaration": {
-                this.declare(node.id.name, "unknown");
-                const t = this.visit(node.init);
-                if (node.typeAnnotation && t !== node.typeAnnotation && t !== "unknown") {
-                    this.error(`Type mismatch: declared ${node.typeAnnotation} but got ${t}`, node);
-                }
-                this.scopes[this.scopes.length - 1].set(node.id.name, t);
-                return t;
-            }
+            case "VariableDeclaration": return this.visitVariableDeclaration(node);
 
             case "FunctionDeclaration": {
                 this.functions[node.name.name] = node.returnType ?? "unknown";
@@ -215,11 +223,7 @@ export default class SemanticAnalyzer {
                 return t;
             }
 
-            case "AssignmentExpression": {
-                this.visit(node.left);
-                this.visit(node.right);
-                return "unknown";
-            }
+            case "AssignmentExpression": return this.visitAssignmentExpression(node);
 
             case "ExpressionStatement": return this.visit(node.expression);
 
