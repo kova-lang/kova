@@ -148,6 +148,7 @@ export default class Parser {
 
         return {
             type: "FunctionDeclaration",
+            // might change "name" key to "id"
             name: { type: "Identifier", name: name.value, line: name.line, column: name.column },
             params,
             returnType,
