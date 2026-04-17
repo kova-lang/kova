@@ -9,5 +9,19 @@ let isProb:boolean = false
 print(isProb)
 
 let box = null
-
+let A = "Th";
 print(box)
+
+let objs = {
+    one:"james",
+    two:"john",
+    three:"kelvin",
+    call:() => print(objs.one)
+}
+
+let double = (x) => x * 2
+
+print(objs.one)
+print(typeOf(car))
+print(double(4))
+print(objs.call())
