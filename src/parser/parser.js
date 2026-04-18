@@ -673,12 +673,10 @@ export default class Parser {
         return this.parsePower();
     }
     parsePower() {
-        let left = this.parsePostfix()
-        while (this.currentToken === "**" && this.currentToken !== "EOF") {
-            let op = this.currentToken;
-            this.advance();
-            let right = this.parsePower();
-            left = this.makeBinary(op, left, right);
+        let left = this.parsePostfix();
+        while (this.currentToken.type === "EXP" && this.currentToken !== "EOF") {
+            let op = this.currentToken; this.advance();
+            left = this.makeBinary(op, left, this.parsePower());
         }
         return left;
     }
