@@ -655,6 +655,8 @@ export default class Parser {
     parsePower() {
         let left = this.parsePostfix()
         while (this.currentToken === "**" && this.currentToken !== "EOF") {
+            // Since ** is currently the only node with the type PowerExpression, we actually do not need to create extra space
+            // for op, but it is done anyway for uniformity.
             let op = this.currentToken;
             this.advance();
             let right = this.parsePower();
