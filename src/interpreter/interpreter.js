@@ -28,30 +28,30 @@ export default class Interpreter {
                 if (typeof v === "string") return v.length;
                 throw new RuntimeError("len() expects array or string");
             },
-            push:     (arr, val) => { arr.push(val); return arr; },
-            pop:      (arr)      => arr.pop(),
-            keys:     (obj)      => Object.keys(obj),
-            values:   (obj)      => Object.values(obj),
-            toString: (v)        => String(v),
-            toNumber: (v)        => Number(v),
-            typeOf:   (v)        => { if (v === null) return "null"; if (Array.isArray(v)) return "array"; if (isProb(v)) return "prob"; return typeof v; },
-            range:    (start, end, step = 1) => { const a = []; for (let i = start; i < end; i += step) a.push(i); return a; },
+            push: (arr, val) => { arr.push(val); return arr; },
+            pop: (arr) => arr.pop(),
+            keys: (obj) => Object.keys(obj),
+            values: (obj) => Object.values(obj),
+            toString: (v) => String(v),
+            toNumber: (v) => Number(v),
+            typeOf: (v) => { if (v === null) return "null"; if (Array.isArray(v)) return "array"; if (isProb(v)) return "prob"; return typeof v; },
+            range: (start, end, step = 1) => { const a = []; for (let i = start; i < end; i += step) a.push(i); return a; },
             // resolve() is injected from externals so it gets the real Groq Prob
             parseJSON: (s) => JSON.parse(s),
-            toJSON:    (v) => JSON.stringify(v),
-            now:       ()  => Date.now(),
-            isoDate:   ()  => new Date().toISOString(),
-            flat:      (a) => a.flat(),
-            unique:    (a) => [...new Set(a)],
-            sort:      (a) => [...a].sort(),
-            abs:   Math.abs,
-            sqrt:  Math.sqrt,
+            toJSON: (v) => JSON.stringify(v),
+            now: () => Date.now(),
+            isoDate: () => new Date().toISOString(),
+            flat: (a) => a.flat(),
+            unique: (a) => [...new Set(a)],
+            sort: (a) => [...a].sort(),
+            abs: Math.abs,
+            sqrt: Math.sqrt,
             floor: Math.floor,
-            ceil:  Math.ceil,
+            ceil: Math.ceil,
             round: Math.round,
-            pow:   Math.pow,
-            max:   Math.max,
-            min:   Math.min,
+            pow: Math.pow,
+            max: Math.max,
+            min: Math.min,
             random: Math.random,
         });
     }
@@ -92,7 +92,7 @@ export default class Interpreter {
     // #### Scope management ####
 
     enterScope() { this.scopes.push(new Map()); }
-    exitScope()  { this.scopes.pop(); }
+    exitScope() { this.scopes.pop(); }
 
     declare(name, value) { this.scopes[this.scopes.length - 1].set(name, value); }
 
@@ -135,9 +135,9 @@ export default class Interpreter {
                 this.declare(node.name.name, node);
                 return undefined;
 
-            case "Identifier":        return this.resolve(node.name);
-            case "Literal":           return node.value;
-            case "EnvExpression":     return new Proxy(process.env, { get: (t, k) => t[k] ?? null });
+            case "Identifier": return this.resolve(node.name);
+            case "Literal": return node.value;
+            case "EnvExpression": return new Proxy(process.env, { get: (t, k) => t[k] ?? null });
 
             case "ArrayExpression": {
                 const els = [];
@@ -158,8 +158,8 @@ export default class Interpreter {
                 return obj[key];
             }
 
-            case "BinaryExpression":    return this.evaluateBinary(node, await this.visit(node.left), await this.visit(node.right));
-            case "UnaryExpression":     return this.evaluateUnary(node, await this.visit(node.argument));
+            case "BinaryExpression": return this.evaluateBinary(node, await this.visit(node.left), await this.visit(node.right));
+            case "UnaryExpression": return this.evaluateUnary(node, await this.visit(node.argument));
 
             case "AssignmentExpression": {
                 const value = await this.visit(node.right);
@@ -232,21 +232,21 @@ export default class Interpreter {
             case "ExpressionStatement": return await this.visit(node.expression);
 
             case "HttpStatement":
-            case "HttpExpression":    return await this.executeHttp(node);
+            case "HttpExpression": return await this.executeHttp(node);
 
-            case "ConnectStatement":  return await this.executeConnect(node);
-            case "FindStatement":     return await this.executeFind(node);
-            case "InsertStatement":   return await this.executeInsert(node);
-            case "UpdateStatement":   return await this.executeUpdate(node);
+            case "ConnectStatement": return await this.executeConnect(node);
+            case "FindStatement": return await this.executeFind(node);
+            case "InsertStatement": return await this.executeInsert(node);
+            case "UpdateStatement": return await this.executeUpdate(node);
 
-            case "CallExpression":    return await this.executeCall(node);
+            case "CallExpression": return await this.executeCall(node);
 
             case "ArrowFunction":
                 return { __kova_fn__: true, node, closure: this.scopes.map(s => new Map(s)) };
 
             case "ImportStatement":
-                node.specifiers.forEach(spec => { try { this.declare(spec, null); } catch (_) {} });
-                if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) {} }
+                node.specifiers.forEach(spec => { try { this.declare(spec, null); } catch (_) { } });
+                if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) { } }
                 this.output.push(`[IMPORT] ${node.defaultImport ?? node.specifiers.join(", ")} from "${node.source}"`);
                 return undefined;
 
@@ -268,14 +268,14 @@ export default class Interpreter {
                 return undefined;
             case "VariableDeclaration": { const v = this._visitSync(node.init); this.declare(node.id.name, v); return undefined; }
             case "FunctionDeclaration": this.functions[node.name.name] = node; this.declare(node.name.name, node); return undefined;
-            case "Identifier":      return this.resolve(node.name);
-            case "Literal":         return node.value;
-            case "EnvExpression":   return new Proxy(process.env, { get: (t, k) => t[k] ?? null });
+            case "Identifier": return this.resolve(node.name);
+            case "Literal": return node.value;
+            case "EnvExpression": return new Proxy(process.env, { get: (t, k) => t[k] ?? null });
             case "ArrayExpression": return node.elements.map(el => this._visitSync(el));
             case "ObjectExpression": { const obj = {}; node.properties.forEach(p => { obj[p.key] = this._visitSync(p.value); }); return obj; }
             case "MemberExpression": { const obj = this._visitSync(node.object); const key = node.computed ? this._visitSync(node.property) : node.property; return obj[key]; }
             case "BinaryExpression": return this.evaluateBinary(node, this._visitSync(node.left), this._visitSync(node.right));
-            case "UnaryExpression":  return this.evaluateUnary(node, this._visitSync(node.argument));
+            case "UnaryExpression": return this.evaluateUnary(node, this._visitSync(node.argument));
             case "AssignmentExpression": {
                 const value = this._visitSync(node.right);
                 if (node.left.type === "Identifier") {
@@ -297,13 +297,13 @@ export default class Interpreter {
             case "HttpStatement":
             case "HttpExpression": return this._execHttpSync(node);
             case "ConnectStatement": return this._execConnectSync(node);
-            case "FindStatement":    return this._execFindSync(node);
-            case "InsertStatement":  return this._execInsertSync(node);
-            case "UpdateStatement":  return this._execUpdateSync(node);
-            case "CallExpression":   return this._execCallSync(node);
-            case "ArrowFunction":    return { __kova_fn__: true, node, closure: this.scopes.map(s => new Map(s)) };
-            case "ImportStatement":  node.specifiers.forEach(s => { try { this.declare(s, null); } catch (_) {} }); if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) {} } return undefined;
-            case "ExportStatement":  return this._visitSync(node.declaration);
+            case "FindStatement": return this._execFindSync(node);
+            case "InsertStatement": return this._execInsertSync(node);
+            case "UpdateStatement": return this._execUpdateSync(node);
+            case "CallExpression": return this._execCallSync(node);
+            case "ArrowFunction": return { __kova_fn__: true, node, closure: this.scopes.map(s => new Map(s)) };
+            case "ImportStatement": node.specifiers.forEach(s => { try { this.declare(s, null); } catch (_) { } }); if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) { } } return undefined;
+            case "ExportStatement": return this._visitSync(node.declaration);
             default: throw new RuntimeError(`Unknown node type: ${node.type}`);
         }
     }
@@ -311,8 +311,8 @@ export default class Interpreter {
     // #### HTTP ####
 
     async executeHttp(node) {
-        const url    = await this.visit(node.url);
-        const body   = node.body    ? await this.visit(node.body)    : null;
+        const url = await this.visit(node.url);
+        const body = node.body ? await this.visit(node.body) : null;
         const method = node.method.replace("_HTTP", "");
         this.output.push(`[HTTP] ${method} -> ${url}`);
         if (body) this.output.push(`       body: ${JSON.stringify(body)}`);
@@ -322,8 +322,8 @@ export default class Interpreter {
     }
 
     _execHttpSync(node) {
-        const url    = this._visitSync(node.url);
-        const body   = node.body ? this._visitSync(node.body) : null;
+        const url = this._visitSync(node.url);
+        const body = node.body ? this._visitSync(node.body) : null;
         const method = node.method.replace("_HTTP", "");
         this.output.push(`[HTTP] ${method} -> ${url}`);
         const response = { status: 200, ok: true, url, method, body: null, __kova_http__: true };
@@ -335,8 +335,8 @@ export default class Interpreter {
 
     async executeConnect(node) {
         const config = await this.visit(node.config);
-        const name   = node.binding?.name ?? node.driver;
-        const conn   = { driver: node.driver, config, connected: true, __kova_conn__: true };
+        const name = node.binding?.name ?? node.driver;
+        const conn = { driver: node.driver, config, connected: true, __kova_conn__: true };
         this.connections[name] = conn;
         this._bindOrDeclare(name, conn);
         this.output.push(`[DB] Connected to ${node.driver}`);
@@ -344,8 +344,8 @@ export default class Interpreter {
     }
     _execConnectSync(node) {
         const config = this._visitSync(node.config);
-        const name   = node.binding?.name ?? node.driver;
-        const conn   = { driver: node.driver, config, connected: true, __kova_conn__: true };
+        const name = node.binding?.name ?? node.driver;
+        const conn = { driver: node.driver, config, connected: true, __kova_conn__: true };
         this._bindOrDeclare(name, conn);
         this.output.push(`[DB] Connected to ${node.driver}`);
         return conn;
@@ -353,7 +353,7 @@ export default class Interpreter {
 
     async executeFind(node) {
         const filter = node.filter ? await this.visit(node.filter) : {};
-        const limitV = node.limit  ? await this.visit(node.limit)  : null;
+        const limitV = node.limit ? await this.visit(node.limit) : null;
         const orderBy = node.orderBy ?? null;
         const result = { type: "cursor", collection: node.collection, filter, limit: limitV, orderBy, rows: [], __kova_db__: true };
         this.output.push(`[DB] find ${node.collection}`);
@@ -361,8 +361,8 @@ export default class Interpreter {
         return result;
     }
     _execFindSync(node) {
-        const filter  = node.filter  ? this._visitSync(node.filter) : {};
-        const limitV  = node.limit   ? this._visitSync(node.limit)  : null;
+        const filter = node.filter ? this._visitSync(node.filter) : {};
+        const limitV = node.limit ? this._visitSync(node.limit) : null;
         const orderBy = node.orderBy ?? null;
         const result = { type: "cursor", collection: node.collection, filter, limit: limitV, orderBy, rows: [], __kova_db__: true };
         this.output.push(`[DB] find ${node.collection}`);
@@ -372,14 +372,14 @@ export default class Interpreter {
 
     async executeInsert(node) {
         const document = await this.visit(node.document);
-        const result   = { type: "insertResult", collection: node.collection, document, insertedId: `id_${Date.now()}`, __kova_db__: true };
+        const result = { type: "insertResult", collection: node.collection, document, insertedId: `id_${Date.now()}`, __kova_db__: true };
         this.output.push(`[DB] insert into ${node.collection}`);
         if (node.binding) this._bindOrDeclare(node.binding.name, result);
         return result;
     }
     _execInsertSync(node) {
         const document = this._visitSync(node.document);
-        const result   = { type: "insertResult", collection: node.collection, document, insertedId: `id_${Date.now()}`, __kova_db__: true };
+        const result = { type: "insertResult", collection: node.collection, document, insertedId: `id_${Date.now()}`, __kova_db__: true };
         this.output.push(`[DB] insert into ${node.collection}`);
         if (node.binding) this._bindOrDeclare(node.binding.name, result);
         return result;
@@ -387,16 +387,16 @@ export default class Interpreter {
 
     async executeUpdate(node) {
         const updates = await this.visit(node.updates);
-        const filter  = node.filter ? await this.visit(node.filter) : {};
-        const result  = { type: "updateResult", collection: node.collection, updates, filter, modifiedCount: 1, __kova_db__: true };
+        const filter = node.filter ? await this.visit(node.filter) : {};
+        const result = { type: "updateResult", collection: node.collection, updates, filter, modifiedCount: 1, __kova_db__: true };
         this.output.push(`[DB] update ${node.collection}`);
         if (node.binding) this._bindOrDeclare(node.binding.name, result);
         return result;
     }
     _execUpdateSync(node) {
         const updates = this._visitSync(node.updates);
-        const filter  = node.filter ? this._visitSync(node.filter) : {};
-        const result  = { type: "updateResult", collection: node.collection, updates, filter, modifiedCount: 1, __kova_db__: true };
+        const filter = node.filter ? this._visitSync(node.filter) : {};
+        const result = { type: "updateResult", collection: node.collection, updates, filter, modifiedCount: 1, __kova_db__: true };
         this.output.push(`[DB] update ${node.collection}`);
         if (node.binding) this._bindOrDeclare(node.binding.name, result);
         return result;
@@ -408,11 +408,11 @@ export default class Interpreter {
         if (node.callee.type === "MemberExpression") return await this.executeMemberCall(node);
 
         const fnName = node.callee.name;
-        const args   = [];
+        const args = [];
         for (const a of node.arguments) args.push(await this.visit(a));
 
         if (fnName in this._builtins) return this._builtins[fnName](...args);
-        if (this.functions[fnName])   return await this.callUserFunction(this.functions[fnName], args);
+        if (this.functions[fnName]) return await this.callUserFunction(this.functions[fnName], args);
         if (Object.prototype.hasOwnProperty.call(this.externals, fnName)) {
             const result = await this.externals[fnName](...args);
             return result;
@@ -423,9 +423,9 @@ export default class Interpreter {
     _execCallSync(node) {
         if (node.callee.type === "MemberExpression") return this._execMemberCallSync(node);
         const fnName = node.callee.name;
-        const args   = node.arguments.map(a => this._visitSync(a));
+        const args = node.arguments.map(a => this._visitSync(a));
         if (fnName in this._builtins) return this._builtins[fnName](...args);
-        if (this.functions[fnName])   return this._callUserFnSync(this.functions[fnName], args);
+        if (this.functions[fnName]) return this._callUserFnSync(this.functions[fnName], args);
         if (Object.prototype.hasOwnProperty.call(this.externals, fnName)) return this.externals[fnName](...args);
         throw new RuntimeError(`Unknown function "${fnName}"`);
     }
@@ -455,61 +455,61 @@ export default class Interpreter {
     }
 
     async executeMemberCall(node) {
-        const obj    = await this.visit(node.callee.object);
+        const obj = await this.visit(node.callee.object);
         const method = node.callee.property;
-        const args   = [];
+        const args = [];
         for (const a of node.arguments) args.push(await this.visit(a));
         return this._callMethod(obj, method, args);
     }
 
     _execMemberCallSync(node) {
-        const obj    = this._visitSync(node.callee.object);
+        const obj = this._visitSync(node.callee.object);
         const method = node.callee.property;
-        const args   = node.arguments.map(a => this._visitSync(a));
+        const args = node.arguments.map(a => this._visitSync(a));
         return this._callMethod(obj, method, args);
     }
 
     _callMethod(obj, method, args) {
         if (Array.isArray(obj)) {
             switch (method) {
-                case "push":    obj.push(...args); return obj;
-                case "pop":     return obj.pop();
-                case "shift":   return obj.shift();
+                case "push": obj.push(...args); return obj;
+                case "pop": return obj.pop();
+                case "shift": return obj.shift();
                 case "unshift": obj.unshift(...args); return obj;
-                case "length":  return obj.length;
+                case "length": return obj.length;
                 case "includes": return obj.includes(args[0]);
-                case "indexOf":  return obj.indexOf(args[0]);
-                case "join":     return obj.join(args[0] ?? ",");
-                case "slice":    return obj.slice(...args);
-                case "reverse":  return obj.reverse();
-                case "map":    return obj.map(el => this._callArbitraryFn(args[0], [el]));
+                case "indexOf": return obj.indexOf(args[0]);
+                case "join": return obj.join(args[0] ?? ",");
+                case "slice": return obj.slice(...args);
+                case "reverse": return obj.reverse();
+                case "map": return obj.map(el => this._callArbitraryFn(args[0], [el]));
                 case "filter": return obj.filter(el => this._callArbitraryFn(args[0], [el]));
-                case "find":   return obj.find(el => this._callArbitraryFn(args[0], [el])) ?? null;
+                case "find": return obj.find(el => this._callArbitraryFn(args[0], [el])) ?? null;
                 case "forEach": obj.forEach(el => this._callArbitraryFn(args[0], [el])); return null;
                 default: throw new RuntimeError(`Array has no method "${method}"`);
             }
         }
         if (typeof obj === "string") {
             switch (method) {
-                case "length":      return obj.length;
+                case "length": return obj.length;
                 case "toUpperCase": return obj.toUpperCase();
                 case "toLowerCase": return obj.toLowerCase();
-                case "trim":        return obj.trim();
-                case "split":       return obj.split(args[0] ?? "");
-                case "includes":    return obj.includes(args[0]);
-                case "startsWith":  return obj.startsWith(args[0]);
-                case "endsWith":    return obj.endsWith(args[0]);
-                case "replace":     return obj.replace(args[0], args[1]);
-                case "slice":       return obj.slice(...args);
-                case "indexOf":     return obj.indexOf(args[0]);
+                case "trim": return obj.trim();
+                case "split": return obj.split(args[0] ?? "");
+                case "includes": return obj.includes(args[0]);
+                case "startsWith": return obj.startsWith(args[0]);
+                case "endsWith": return obj.endsWith(args[0]);
+                case "replace": return obj.replace(args[0], args[1]);
+                case "slice": return obj.slice(...args);
+                case "indexOf": return obj.indexOf(args[0]);
                 default: throw new RuntimeError(`String has no method "${method}"`);
             }
         }
         if (typeof obj === "object" && obj !== null) {
             switch (method) {
-                case "keys":   return Object.keys(obj);
+                case "keys": return Object.keys(obj);
                 case "values": return Object.values(obj);
-                case "has":    return Object.prototype.hasOwnProperty.call(obj, args[0]);
+                case "has": return Object.prototype.hasOwnProperty.call(obj, args[0]);
                 default:
                     if (typeof obj[method] === "function") return obj[method](...args);
                     throw new RuntimeError(`Object has no method "${method}"`);
@@ -521,7 +521,7 @@ export default class Interpreter {
     _callArbitraryFn(fn, args) {
         if (fn && fn.__kova_fn__) {
             const saved = this.scopes;
-            this.scopes  = fn.closure.map(s => new Map(s));
+            this.scopes = fn.closure.map(s => new Map(s));
             this.enterScope();
             fn.node.params.forEach((p, i) => this.declare(p.name, args[i] ?? null));
             let result;
@@ -552,20 +552,21 @@ export default class Interpreter {
 
     evaluateBinary(node, left, right) {
         switch (node.operator) {
-            case "+":  return left + right;
-            case "-":  return left - right;
-            case "*":  return left * right;
-            case "/":  if (right === 0) throw new RuntimeError("Division by zero"); return left / right;
-            case "%":  return left % right;
+            case "+": return left + right;
+            case "-": return left - right;
+            case "*": return left * right;
+            case "/": if (right === 0) throw new RuntimeError("Division by zero"); return left / right;
+            case "**": return left ** right;
+            case "%": return left % right;
             case "==": return left === right;
             case "!=": return left !== right;
-            case ">":  return left > right;
-            case "<":  return left < right;
+            case ">": return left > right;
+            case "<": return left < right;
             case ">=": return left >= right;
             case "<=": return left <= right;
             case "&&": return left && right;
             case "||": return left || right;
-            default:   throw new RuntimeError(`Unknown operator "${node.operator}"`);
+            default: throw new RuntimeError(`Unknown operator "${node.operator}"`);
         }
     }
 
@@ -573,7 +574,7 @@ export default class Interpreter {
         switch (node.operator) {
             case "-": return -value;
             case "!": return !value;
-            default:  throw new RuntimeError(`Unknown unary operator "${node.operator}"`);
+            default: throw new RuntimeError(`Unknown unary operator "${node.operator}"`);
         }
     }
 
@@ -583,7 +584,7 @@ export default class Interpreter {
             case "-=": return current - value;
             case "*=": return current * value;
             case "/=": return current / value;
-            default:   throw new RuntimeError(`Unknown compound operator ${op}`);
+            default: throw new RuntimeError(`Unknown compound operator ${op}`);
         }
     }
 
