@@ -610,7 +610,7 @@ export default class Parser {
 
     // TODO: add exponentiation operator (**)
     // Must be parsed as right-associative with higher precedence than * and /
-    
+
     parseLogicalOr() {
         let left = this.parseLogicalAnd();
         while (this.currentToken.type === "OR") {
@@ -673,17 +673,10 @@ export default class Parser {
         return this.parsePower();
     }
     parsePower() {
-        let left = this.parsePostfix()
-        while (this.currentToken === "**" && this.currentToken !== "EOF") {
-            let op = this.currentToken;
-            this.advance();
-            let right = this.parsePower();
-            left = {
-                type: "PowerExpression",
-                op,
-                left,
-                right
-            }
+        let left = this.parsePostfix();
+        while (this.currentToken.type === "EXP" && this.currentToken !== "EOF") {
+            let op = this.currentToken; this.advance();
+            left = this.makeBinary(op, left, this.parsePower());
         }
         return left;
     }
