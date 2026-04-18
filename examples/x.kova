@@ -1,0 +1,4 @@
+let name = "daniel";
+
+
+print(name)

@@ -9,14 +9,14 @@ const runParserTest = (name, code) => {
     console.log(code);
     console.log("TOKENS:");
 
-   
+
 
     let tokens;
     let AST;
 
     // First try to tokenize the code string
     try {
-         const lexerInit = new Lexer(code)
+        const lexerInit = new Lexer(code)
         tokens = lexerInit.tokenize();
         console.table(tokens);
 
@@ -30,7 +30,7 @@ const runParserTest = (name, code) => {
     try {
         const parserInit = new Parser();
         AST = parserInit.parseProgram(tokens);
-        console.dir(AST, {depth:null})
+        console.dir(AST, { depth: null })
 
     }
     catch (err) {
@@ -87,7 +87,18 @@ let b = 2
 POST "/hello"
 `);
 
-// Test 8 — Syntax Error Detection
-runParserTest("error", `
-let x 10
+// // Test 8 — Syntax Error Detection
+// runParserTest("error", `
+// let x 10
+// `);
+
+// Test 9 — Arrow Function 
+runParserTest("arrow function", `
+let x = () => print("Hello")
+`);
+
+runParserTest("arrow function", `
+let x = {
+call:() => print("Hello")
+}
 `);
