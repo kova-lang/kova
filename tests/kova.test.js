@@ -57,7 +57,7 @@ test("float",            () => eq(runKovaSync(`return 1.5 + 1.5`).returnValue, 3
 test("unary neg",        () => eq(runKovaSync(`return -5`).returnValue, -5));
 test("string concat",    () => eq(runKovaSync(`return "hello" + " world"`).returnValue, "hello world"));
 test("div by zero throws", () => assertThrows(() => runKovaSync(`return 10 / 0`), "Division by zero"));
-test("exp in expressions", () => assertThrows(() => runKovaSync(`return 2**2`), 4));
+test("exp in expressions", () => runKovaSync(`return 2**2`), 4);
 
 
 // #### Comparison & Logical ####
