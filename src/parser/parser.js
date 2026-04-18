@@ -670,7 +670,22 @@ export default class Parser {
             const op = this.currentToken; this.advance();
             return { type: "UnaryExpression", operator: op.value, argument: this.parseUnary(), line: op.line, column: op.column };
         }
-        return this.parsePostfix();
+        return this.parsePower();
+    }
+    parsePower() {
+        let left = this.parsePostfix()
+        while (this.currentToken === "**" && this.currentToken !== "EOF") {
+            let op = this.currentToken;
+            this.advance();
+            let right = this.parsePower();
+            left = {
+                type: "PowerExpression",
+                op,
+                left,
+                right
+            }
+        }
+        return left;
     }
 
     parsePostfix() {
