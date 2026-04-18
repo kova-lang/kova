@@ -5,7 +5,7 @@ import Parser from "../src/parser/parser.js";
 
 const runParserTest = (name, code) => {
 
-    console.log(`\n=== TEST: ${name} ===`);
+    console.log(`\n=============================== TEST: ${name} ========================================`);
     console.log(code);
     console.log("TOKENS:");
 
@@ -102,3 +102,13 @@ let x = {
 call:() => print("Hello")
 }
 `);
+
+
+// Test 10 — Exponential expression
+runParserTest("Exponential", `
+2**2**3
+    `);
+// with unary test
+runParserTest("Exponential", `
+-2**2**3
+    `);
