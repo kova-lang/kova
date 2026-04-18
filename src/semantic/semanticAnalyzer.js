@@ -106,7 +106,7 @@ export default class SemanticAnalyzer {
         if (this.isProb(L) || this.isProb(R))
             this.error("Probabilistic values must be resolved before use", node);
 
-        if (["+", "-", "*", "/", "%"].includes(op)) {
+        if (["+", "-", "*", "/", "%", "**"].includes(op)) {
             if (op === "+" && L === "string" && R === "string") return "string";
             if (L !== "unknown" && R !== "unknown" && (L !== "number" || R !== "number"))
                 this.error(`Arithmetic operators require numbers, got ${this.typeToString(L)} and ${this.typeToString(R)}`, node);
