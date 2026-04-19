@@ -10,6 +10,36 @@ export default class SemanticAnalyzer {
         this.functions = {};
     }
 
+    // Kova built-in functions
+    #BUILTINS = {
+        print: "null",
+        log: "null",
+        len: "number",
+        push: "array",       // returns the array
+        pop: "unknown",      // depends on array content
+        keys: "array",
+        values: "array",
+        toString: "string",
+        toNumber: "number",
+        typeOf: "string",
+        range: "array",
+        parseJSON: "unknown", // could be object/array/etc
+        toJSON: "string",
+        now: "number",
+        isoDate: "string",
+        flat: "array",
+        unique: "array",
+        sort: "array",
+        abs: "number",
+        sqrt: "number",
+        floor: "number",
+        ceil: "number",
+        round: "number",
+        pow: "number",
+        max: "number",
+        min: "number",
+        random: "number"
+    };
     // #### Prob helpers ####
     Prob(inner) { return { kind: "prob", inner }; }
     isProb(t) { return t !== null && typeof t === "object" && t.kind === "prob"; }
@@ -135,7 +165,7 @@ export default class SemanticAnalyzer {
         const argType = this.visit(node.argument);
         if (this.isProb(argType))
             this.error("Probabilistic values must be resolved before use", node);
-        
+
         if (node.operator === "-") {
             if (argType !== "number" && argType !== "unknown")
                 this.error("Unary '-' requires a number", node);
@@ -218,14 +248,10 @@ export default class SemanticAnalyzer {
             return this.unwrapProb(argType);
         }
         // Kova built-in functions
-        const BUILTINS = {
-            print: "null", len: "number", push: "null", pop: "unknown",
-            keys: "array", values: "array", toString: "string",
-            toNumber: "number", typeOf: "string", range: "array", resolve: "unknown"
-        };
-        if (Object.prototype.hasOwnProperty.call(BUILTINS, fnName)) {
+
+        if (Object.prototype.hasOwnProperty.call(this.#BUILTINS, fnName)) {
             node.arguments.forEach(a => this.visit(a));
-            return BUILTINS[fnName];
+            return this.#BUILTINS[fnName];
         }
 
         if (this.functions[fnName]) {
