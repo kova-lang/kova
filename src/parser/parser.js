@@ -789,18 +789,47 @@ export default class Parser {
     }
 
     isArrowFunction() {
-        let depth = 0, i = this.currentPos;
+        let i = this.currentPos;
+
+        if (this.tokens[i].type !== "LPAREN") return false;
+
+        let depth = 0;
+
         while (i < this.tokens.length) {
-            if (this.tokens[i].type === "LPAREN") depth++;
-            else if (this.tokens[i].type === "RPAREN") {
+            const tok = this.tokens[i];
+
+            if (tok.type === "LPAREN") depth++;
+            else if (tok.type === "RPAREN") {
                 depth--;
-                if (depth === 0) return i + 1 < this.tokens.length && this.tokens[i + 1].type === "ARROW";
+
+                if (depth === 0) {
+                    const next = this.tokens[i + 1];
+                    if (!next || next.type !== "ARROW") return false;
+
+
+                    return this.isValidParamList(this.currentPos + 1, i);
+                }
             }
+
             i++;
         }
+
         return false;
     }
+    isValidParamList(start, end) {
+        for (let i = start; i < end; i++) {
+            const tok = this.tokens[i];
 
+            if (
+                tok.type !== "IDENTIFIER" &&
+                tok.type !== "COMMA" &&
+                tok.type !== "COLON"
+            ) {
+                return false;
+            }
+        }
+        return true;
+    }
     parseArrowFunction() {
         const paren = this.currentToken;
         this.expect("LPAREN");
