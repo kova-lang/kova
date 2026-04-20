@@ -34,7 +34,13 @@ export default class Interpreter {
             values: (obj) => Object.values(obj),
             toString: (v) => String(v),
             toNumber: (v) => Number(v),
-            typeOf: (v) => { if (v === null) return "null"; if (Array.isArray(v)) return "array"; if (isProb(v)) return "prob"; return typeof v; },
+            typeOf: (v) => {
+                if (v === null) return "null";
+                if (Array.isArray(v)) return "array";
+                if (isProb(v)) return "prob";
+                if (v && v.__kova_fn__) return "function";  
+                return typeof v;
+            },
             range: (start, end, step = 1) => { const a = []; for (let i = start; i < end; i += step) a.push(i); return a; },
             // resolve() is injected from externals so it gets the real Groq Prob
             parseJSON: (s) => JSON.parse(s),
@@ -56,7 +62,7 @@ export default class Interpreter {
         });
     }
 
-    // #### Async interpret (supports AI() calls) ####
+    // #### Async interpret (supports AI() calls) #### resolve
 
     async interpret(ast) {
         this.returnValue = undefined;
@@ -97,7 +103,7 @@ export default class Interpreter {
     declare(name, value) { this.scopes[this.scopes.length - 1].set(name, value); }
 
     resolve(name) {
-        for (let i = this.scopes.length - 1; i >= 0; i--) {
+       for (let i = this.scopes.length - 1; i >= 0; i--) {
             if (this.scopes[i].has(name)) return this.scopes[i].get(name);
         }
         throw new RuntimeError(`Undefined variable "${name}"`);
@@ -413,21 +419,63 @@ export default class Interpreter {
 
         if (fnName in this._builtins) return this._builtins[fnName](...args);
         if (this.functions[fnName]) return await this.callUserFunction(this.functions[fnName], args);
+
+        // Arrow functions assigned to variables live in scope, not this.functions
+        try {
+            const resolved = this.resolve(fnName);
+            if (resolved && resolved.__kova_fn__) return await this.callClosure(resolved, args);
+        } catch (_) { /* not in scope */ }
+
         if (Object.prototype.hasOwnProperty.call(this.externals, fnName)) {
-            const result = await this.externals[fnName](...args);
-            return result;
+            return await this.externals[fnName](...args);
         }
         throw new RuntimeError(`Unknown function "${fnName}"`);
     }
 
     _execCallSync(node) {
         if (node.callee.type === "MemberExpression") return this._execMemberCallSync(node);
+
         const fnName = node.callee.name;
         const args = node.arguments.map(a => this._visitSync(a));
+
         if (fnName in this._builtins) return this._builtins[fnName](...args);
         if (this.functions[fnName]) return this._callUserFnSync(this.functions[fnName], args);
+
+        // Arrow functions assigned to variables live in scope, not this.functions
+        try {
+            const resolved = this.resolve(fnName);
+            if (resolved && resolved.__kova_fn__) return this._callArbitraryFn(resolved, args);
+        } catch (_) { /* not in scope */ }
+
         if (Object.prototype.hasOwnProperty.call(this.externals, fnName)) return this.externals[fnName](...args);
         throw new RuntimeError(`Unknown function "${fnName}"`);
+    }
+
+    async callClosure(fn, args) {
+        const saved = this.scopes;
+        this.scopes = [...this.scopes, ...fn.closure.map(s => new Map(s))];
+        this.enterScope();
+        fn.node.params.forEach((p, i) => this.declare(p.name, args[i] ?? null));
+
+        let result;
+        if (fn.node.body.type === "BlockStatement") {
+            const prevReturn = this.returnValue, prevShould = this.shouldReturn;
+            this.returnValue = undefined;
+            this.shouldReturn = false;
+            for (const stmt of fn.node.body.body) {
+                await this.visit(stmt);
+                if (this.shouldReturn) break;
+            }
+            result = this.returnValue;
+            this.returnValue = prevReturn;
+            this.shouldReturn = prevShould;
+        } else {
+            result = await this.visit(fn.node.body);
+        }
+
+        this.exitScope();
+        this.scopes = saved;
+        return result;
     }
 
     async callUserFunction(fnNode, args) {
@@ -512,6 +560,10 @@ export default class Interpreter {
                 case "has": return Object.prototype.hasOwnProperty.call(obj, args[0]);
                 default:
                     if (typeof obj[method] === "function") return obj[method](...args);
+                    // Handle Kova closures stored as object properties
+                    if (obj[method] && obj[method].__kova_fn__) {
+                        return this._callArbitraryFn(obj[method], args);
+                    }
                     throw new RuntimeError(`Object has no method "${method}"`);
             }
         }
@@ -521,9 +573,11 @@ export default class Interpreter {
     _callArbitraryFn(fn, args) {
         if (fn && fn.__kova_fn__) {
             const saved = this.scopes;
-            this.scopes = fn.closure.map(s => new Map(s));
+            // Live scopes first so current declarations shadow stale closure snapshots
+            this.scopes = [...this.scopes, ...fn.closure.map(s => new Map(s))];
             this.enterScope();
             fn.node.params.forEach((p, i) => this.declare(p.name, args[i] ?? null));
+
             let result;
             if (fn.node.body.type === "BlockStatement") {
                 const prev = this.returnValue, prevS = this.shouldReturn;
@@ -534,6 +588,7 @@ export default class Interpreter {
             } else {
                 result = this._visitSync(fn.node.body);
             }
+
             this.exitScope();
             this.scopes = saved;
             return result;
