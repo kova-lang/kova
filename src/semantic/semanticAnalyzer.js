@@ -182,6 +182,11 @@ export default class SemanticAnalyzer {
     visitVariableDeclaration(node) {
         this.declare(node.id.name, "unknown");
         const t = this.visit(node.init);
+        if (t === "function") {
+            this.functions[node.id.name] =  "unknown";
+            console.log(this.functions)
+        }
+        
         if (node.typeAnnotation && t !== node.typeAnnotation && t !== "unknown")
             this.error(`Type mismatch: declared ${node.typeAnnotation} but got ${this.typeToString(t)}`, node);
         this.scopes[this.scopes.length - 1].set(node.id.name, t);
@@ -213,8 +218,25 @@ export default class SemanticAnalyzer {
 
     visitArrowFunction(node) {
         this.enterScope();
-        node.params.forEach(p => this.declare(p.name, p.typeAnnotation ?? "unknown"));
-        this.visit(node.body);
+
+        node.params.forEach(param => {
+            this.declare(param.name, param.typeAnnotation ?? "unknown");
+        });
+
+        let returnType = "unknown";
+
+        if (node.body.type === "BlockStatement") {
+            const prevReturn = this.currentReturnType;
+            this.currentReturnType = null;
+
+            this.visit(node.body);
+
+            returnType = this.currentReturnType ?? "unknown";
+            this.currentReturnType = prevReturn;
+        } else {
+            returnType = this.visit(node.body);
+        }
+
         this.exitScope();
         return "function";
     }
