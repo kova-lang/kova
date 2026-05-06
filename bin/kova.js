@@ -12,6 +12,7 @@ import 'dotenv/config';
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { runKova, parseKova } from "../src/index.js";
+import { env } from "../config/env.js";
 
 const [,, command, filePath, ...flags] = process.argv;
 
@@ -64,7 +65,6 @@ if (command === "check") {
 } else if (command === "run") {
     try {
         const result = await runKova(code);
-        console.log("API KEY:",process.env.GROQ_API_KEY)
 
         if (result.output.length > 0) result.output.forEach(line => console.log(line));
 
