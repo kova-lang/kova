@@ -10,6 +10,8 @@
  * resolve(prob) unwraps it → T   (marks it resolved, throws if not a Prob)
  */
 
+import { env } from "../../config/env.js";
+
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
@@ -38,7 +40,7 @@ export const resolveProb = (v) => {
 
 // #### Groq client ####
 export const groqAI = async (task, input, schema = null, apiKey = null) => {
-    const key = apiKey ?? process.env.GROQ_API_KEY;
+    const key = apiKey ?? env.GROQ_API_KEY;
     if (!key) throw new Error("GROQ_API_KEY not set. Add it to your .env or pass via ENV.GROQ_API_KEY");
 
     // Build system prompt based on whether structured output is requested
