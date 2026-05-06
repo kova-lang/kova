@@ -22,7 +22,7 @@ kova help
 kova run examples/sentiment.kova
 ```
 
-All 115 tests should pass. The sentiment example should run in stub mode without a Groq key.
+All 120 tests should pass. The sentiment example should run in stub mode without a Groq key.
 
 ---
 
@@ -63,7 +63,7 @@ kova/
 │   ├── pipeline.kova            Multi-step AI pipeline with graph output
 │   └── api.kova                 HTTP fetch + AI tagging + conditional POST
 ├── tests/
-│   └── kova.test.js             115-test suite
+│   └── kova.test.js             120-test suite
 └── README.md
 ```
 
@@ -166,7 +166,7 @@ Before opening a pull request:
 1. Write a test that reproduces the bug and fails
 2. Fix the bug
 3. Confirm the test now passes
-4. Confirm all 115 existing tests still pass
+4. Confirm all 120 existing tests still pass
 
 ---
 

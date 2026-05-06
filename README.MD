@@ -148,7 +148,7 @@ kova/
 │   ├── pipeline.kova            Multi-step AI pipeline with graph output
 │   └── api.kova                 HTTP fetch + AI tagging + conditional POST
 ├── tests/
-│   └── kova.test.js             115-test suite
+│   └── kova.test.js             120-test suite
 └── README.md
 ```
 
@@ -286,7 +286,7 @@ kova help
 npm test
 ```
 
-115 tests covering: variable declarations, arithmetic, comparison, logical operators, loops, functions, closures, arrays, objects, HTTP verbs, database operations, environment variables, imports, respond statements, real-world backend snippets, and the full `AI()` / `Prob<T>` / `resolve()` type system.
+120 tests covering: variable declarations, arithmetic, comparison, logical operators, loops, functions, closures, arrays, objects, HTTP verbs, database operations, environment variables, imports, respond statements, real-world backend snippets, and the full `AI()` / `Prob<T>` / `resolve()` type system.
 
 ---
 
