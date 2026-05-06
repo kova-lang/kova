@@ -13,7 +13,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { runKova, parseKova } from "../src/index.js";
 
-const [,, command, filePath, ...flags] = process.argv;
+const [, , command, filePath, ...flags] = process.argv;
 
 const help = `
 Kova v0.5 : symbolic AI workflow language
@@ -63,7 +63,7 @@ if (command === "check") {
 
 } else if (command === "run") {
     try {
-        const result = await runKova(code);
+        const result = await runKova(code, {}, {}, { filePath: absPath });;
 
         if (result.output.length > 0) result.output.forEach(line => console.log(line));
 

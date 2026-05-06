@@ -26,6 +26,8 @@ function makeAIExternal(aiMode) {
 // #### runKova (async) ####
 
 export async function runKova(code, externals = {}, externalSignatures = {}, options = {}) {
+    const filePath = options.filePath ?? null;
+    
     const aiMode = options.aiMode ?? (process.env.GROQ_API_KEY ? "groq" : "stub");
 
     const aiExternals = {
