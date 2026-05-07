@@ -1,5 +1,6 @@
 import { RuntimeError } from "../core/diagnostic.js";
 import { isProb, resolveProb } from "../ai/groq.js";
+import { loadModule } from "../runtime/loader.js";
 
 export default class Interpreter {
     constructor(externals = {}) {
@@ -11,6 +12,8 @@ export default class Interpreter {
         this.functions = {};
         this.connections = {};
         this.exportMap = {};
+        this.filePath = null;
+        this.signatures = {};
         this.respondValue = undefined;
 
         this._builtins = Object.assign(Object.create(null), {
@@ -251,16 +254,46 @@ export default class Interpreter {
             case "ArrowFunction":
                 return { __kova_fn__: true, node, closure: this.scopes.map(s => new Map(s)) };
 
-            case "ImportStatement":
-                node.specifiers.forEach(spec => { try { this.declare(spec, null); } catch (_) { } });
-                if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) { } }
+            case "ImportStatement": {
+                if (!this.filePath) throw new RuntimeError(
+                    `Cannot resolve import "${node.source}": interpreter has no filePath`
+                );
+                const mod = await loadModule(node.source, this.filePath, this.externals, this.signatures);
+                console.log("mod.exports:", JSON.stringify(Object.keys(mod.exports)));
+                console.log("add value type:", typeof mod.exports.add);
+                console.log("add.__kova_fn__:", mod.exports.add?.__kova_fn__);
+                node.specifiers.forEach(spec => {
+                    if (!(spec in mod.exports)) throw new RuntimeError(
+                        `Module "${node.source}" does not export "${spec}"`
+                    );
+                    try { this.declare(spec, mod.exports[spec]); }
+                    catch (_) { this.assign(spec, mod.exports[spec]); }
+                });
+                if (node.defaultImport) {
+                    const val = mod.exports.default ?? null;
+                    try { this.declare(node.defaultImport, val); }
+                    catch (_) { this.assign(node.defaultImport, val); }
+                }
                 this.output.push(`[IMPORT] ${node.defaultImport ?? node.specifiers.join(", ")} from "${node.source}"`);
                 return undefined;
+            }
 
             case "ExportStatement": {
                 await this.visit(node.declaration);
                 const name = node.declaration.id?.name ?? node.declaration.name?.name;
-                if (name) this.exportMap[name] = this.resolve(name);
+                if (name) {
+                    const resolved = this.resolve(name);
+                    // fn declarations land in scope as raw AST nodes, wrap them as callables
+                    if (resolved && resolved.type === "FunctionDeclaration") {
+                        this.exportMap[name] = {
+                            __kova_fn__: true,
+                            node: resolved,
+                            closure: this.scopes.map(s => new Map(s)),
+                        };
+                    } else {
+                        this.exportMap[name] = resolved;
+                    }
+                }
                 return undefined;
             }
 
@@ -314,11 +347,25 @@ export default class Interpreter {
             case "UpdateStatement": return this._execUpdateSync(node);
             case "CallExpression": return this._execCallSync(node);
             case "ArrowFunction": return { __kova_fn__: true, node, closure: this.scopes.map(s => new Map(s)) };
-            case "ImportStatement": node.specifiers.forEach(s => { try { this.declare(s, null); } catch (_) { } }); if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) { } } return undefined;
+            case "ImportStatement":
+                throw new RuntimeError(
+                    `Import statements require async mode. Use interpret() not interpretSync()`
+                );
             case "ExportStatement": {
                 this._visitSync(node.declaration);
                 const name = node.declaration.id?.name ?? node.declaration.name?.name;
-                if (name) this.exportMap[name] = this.resolve(name);
+                if (name) {
+                    const resolved = this.resolve(name);
+                    if (resolved && resolved.type === "FunctionDeclaration") {
+                        this.exportMap[name] = {
+                            __kova_fn__: true,
+                            node: resolved,
+                            closure: this.scopes.map(s => new Map(s)),
+                        };
+                    } else {
+                        this.exportMap[name] = resolved;
+                    }
+                }
                 return undefined;
             }
             default: throw new RuntimeError(`Unknown node type: ${node.type}`);
@@ -431,11 +478,12 @@ export default class Interpreter {
         if (fnName in this._builtins) return this._builtins[fnName](...args);
         if (this.functions[fnName]) return await this.callUserFunction(this.functions[fnName], args);
 
-        // Arrow functions assigned to variables live in scope, not this.functions
+        let resolved;
         try {
-            const resolved = this.resolve(fnName);
-            if (resolved && resolved.__kova_fn__) return await this.callClosure(resolved, args);
+            resolved = this.resolve(fnName);
         } catch (_) { /* not in scope */ }
+
+        if (resolved && resolved.__kova_fn__) return await this.callClosure(resolved, args);
 
         if (Object.prototype.hasOwnProperty.call(this.externals, fnName)) {
             return await this.externals[fnName](...args);
@@ -453,10 +501,12 @@ export default class Interpreter {
         if (this.functions[fnName]) return this._callUserFnSync(this.functions[fnName], args);
 
         // Arrow functions assigned to variables live in scope, not this.functions
+        let resolved;
         try {
-            const resolved = this.resolve(fnName);
-            if (resolved && resolved.__kova_fn__) return this._callArbitraryFn(resolved, args);
+            resolved = this.resolve(fnName);
         } catch (_) { /* not in scope */ }
+
+        if (resolved && resolved.__kova_fn__) return this._callArbitraryFn(resolved, args);
 
         if (Object.prototype.hasOwnProperty.call(this.externals, fnName)) return this.externals[fnName](...args);
         throw new RuntimeError(`Unknown function "${fnName}"`);

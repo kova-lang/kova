@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { RuntimeError } from "../core/diagnostic.js";
-import { Lexer } from "../lexer/lexer.js";
-import { Parser } from "../parser/parser.js";
-import { SemanticAnalyzer } from "../semantic/analyzer.js";
-import { Interpreter } from "../interpreter/interpreter.js";
+import  Lexer  from "../lexer/lexer.js";
+import  Parser  from "../parser/parser.js";
+import  SemanticAnalyzer  from "../semantic/semanticAnalyzer.js";
+import  Interpreter  from "../interpreter/interpreter.js";
 
 // Cache: absolutePath -> export map
 const moduleCache = new Map();

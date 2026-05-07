@@ -1,4 +1,5 @@
 import { runKovaSync, runKova, defaultExternals, defaultSignatures } from "../src/index.js";
+import { resolve } from "path";
 
 let passed = 0, failed = 0;
 
@@ -265,15 +266,15 @@ test("respond shorthand value", () => {
 
 
 // #### IMPORT ####
-console.log("\n IMPORT");
-test("named import parsed", () => {
-    const r = runKovaSync(`import { handler, util } from "./routes/users"\nreturn true`);
-    eq(r.returnValue, true);
-});
-test("default import parsed", () => {
-    const r = runKovaSync(`import logger from "./lib/logger"\nreturn true`);
-    eq(r.returnValue, true);
-});
+// console.log("\n IMPORT");
+// test("named import parsed", () => {
+//     const r = runKovaSync(`import { handler, util } from "./routes/users"\nreturn true`);
+//     eq(r.returnValue, true);
+// });
+// test("default import parsed", () => {
+//     const r = runKovaSync(`import logger from "./lib/logger"\nreturn true`);
+//     eq(r.returnValue, true);
+// });
 
 
 // #### Real-world Backend Snippets ####
@@ -469,8 +470,8 @@ test("for loop produces for node", () => {
     assert(r.graph.json.nodes.some(n => n.kind === "for"), "No for node");
 });
 test("import produces import node", () => {
-    const r = runKovaSync(`import { handler } from "./routes"`);
-    assert(r.graph.json.nodes.some(n => n.kind === "import"), "No import node");
+    const r = runKovaSync(`// no imports here\nlet x = 1`);
+    assert(r.graph != null, "graph should exist");
 });
 test("complex program graph has multiple node kinds", () => {
     const r = runKovaSync(`
@@ -492,6 +493,52 @@ const syncTotal = passed + failed;
 console.log(`  ${passed} passed, ${failed} failed out of ${syncTotal} tests (${((passed / syncTotal) * 100).toFixed(1)}%)`);
 console.log(`${"####".repeat(56)}\n`);
 
+// #### IMPORT — Async ####
+console.log("\n IMPORT — Async");
+await testAsync("named import: loads exported fn from fixture", async () => {
+    const r = await runKova(
+        `import { add } from "./tests/fixtures/math.kova"\nreturn add(3, 4)`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    eq(r.returnValue, 7);
+});
+await testAsync("named import: loads exported let from fixture", async () => {
+    const r = await runKova(
+        `import { PI } from "./tests/fixtures/math.kova"\nreturn PI`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    eq(r.returnValue, 3.14159);
+});
+await testAsync("import produces import node in graph", async () => {
+    const r = await runKova(
+        `import { add } from "./tests/fixtures/math.kova"\nreturn add(1, 2)`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    assert(r.graph.json.nodes.some(n => n.kind === "import"), "No import node in graph");
+});
+await testAsync("import throws on missing export", async () => {
+    await assertThrowsAsync(
+        () => runKova(
+            `import { notReal } from "./tests/fixtures/math.kova"`,
+            {}, {},
+            { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+        ),
+        `does not export "notReal"`
+    );
+});
+await testAsync("import throws on missing file", async () => {
+    await assertThrowsAsync(
+        () => runKova(
+            `import { x } from "./tests/fixtures/ghost.kova"`,
+            {}, {},
+            { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+        ),
+        "Cannot find module"
+    );
+});
 
 // #### AI Integration (Prob<T>) — Async ####
 console.log("\n AI Integration (Prob<T>) — Async");

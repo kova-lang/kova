@@ -183,10 +183,10 @@ export default class SemanticAnalyzer {
         this.declare(node.id.name, "unknown");
         const t = this.visit(node.init);
         if (t === "function") {
-            this.functions[node.id.name] =  "unknown";
+            this.functions[node.id.name] = "unknown";
             console.log(this.functions)
         }
-        
+
         if (node.typeAnnotation && t !== node.typeAnnotation && t !== "unknown")
             this.error(`Type mismatch: declared ${node.typeAnnotation} but got ${this.typeToString(t)}`, node);
         this.scopes[this.scopes.length - 1].set(node.id.name, t);
@@ -414,9 +414,12 @@ export default class SemanticAnalyzer {
     visitImportStatement(node) {
         node.specifiers.forEach(spec => {
             try { this.declare(spec, "unknown"); } catch (_) { }
+            // register as a known callable so visitCallExpression accepts calls to it
+            this.functions[spec] = "unknown";
         });
         if (node.defaultImport) {
             try { this.declare(node.defaultImport, "unknown"); } catch (_) { }
+            this.functions[node.defaultImport] = "unknown";
         }
         return null;
     }
