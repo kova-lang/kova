@@ -10,6 +10,7 @@ export default class Interpreter {
         this.shouldReturn = false;
         this.functions = {};
         this.connections = {};
+        this.exportMap = {};
         this.respondValue = undefined;
 
         this._builtins = Object.assign(Object.create(null), {
@@ -38,7 +39,7 @@ export default class Interpreter {
                 if (v === null) return "null";
                 if (Array.isArray(v)) return "array";
                 if (isProb(v)) return "prob";
-                if (v && v.__kova_fn__) return "function";  
+                if (v && v.__kova_fn__) return "function";
                 return typeof v;
             },
             range: (start, end, step = 1) => { const a = []; for (let i = start; i < end; i += step) a.push(i); return a; },
@@ -103,7 +104,7 @@ export default class Interpreter {
     declare(name, value) { this.scopes[this.scopes.length - 1].set(name, value); }
 
     resolve(name) {
-       for (let i = this.scopes.length - 1; i >= 0; i--) {
+        for (let i = this.scopes.length - 1; i >= 0; i--) {
             if (this.scopes[i].has(name)) return this.scopes[i].get(name);
         }
         throw new RuntimeError(`Undefined variable "${name}"`);
@@ -256,7 +257,12 @@ export default class Interpreter {
                 this.output.push(`[IMPORT] ${node.defaultImport ?? node.specifiers.join(", ")} from "${node.source}"`);
                 return undefined;
 
-            case "ExportStatement": return await this.visit(node.declaration);
+            case "ExportStatement": {
+                await this.visit(node.declaration);
+                const name = node.declaration.id?.name ?? node.declaration.name?.name;
+                if (name) this.exportMap[name] = this.resolve(name);
+                return undefined;
+            }
 
             default:
                 throw new RuntimeError(`Unknown node type: ${node.type}`);
@@ -309,7 +315,12 @@ export default class Interpreter {
             case "CallExpression": return this._execCallSync(node);
             case "ArrowFunction": return { __kova_fn__: true, node, closure: this.scopes.map(s => new Map(s)) };
             case "ImportStatement": node.specifiers.forEach(s => { try { this.declare(s, null); } catch (_) { } }); if (node.defaultImport) { try { this.declare(node.defaultImport, null); } catch (_) { } } return undefined;
-            case "ExportStatement": return this._visitSync(node.declaration);
+            case "ExportStatement": {
+                this._visitSync(node.declaration);
+                const name = node.declaration.id?.name ?? node.declaration.name?.name;
+                if (name) this.exportMap[name] = this.resolve(name);
+                return undefined;
+            }
             default: throw new RuntimeError(`Unknown node type: ${node.type}`);
         }
     }
