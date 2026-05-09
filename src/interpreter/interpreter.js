@@ -260,10 +260,13 @@ export default class Interpreter {
                     `Cannot resolve import "${node.source}": interpreter has no filePath`
                 );
                 const mod = await loadModule(node.source, this.filePath, this.externals, this.signatures);
-                this.importedASTs.push(...mod.ast.body);
-                console.log("mod.exports:", JSON.stringify(Object.keys(mod.exports)));
-                console.log("add value type:", typeof mod.exports.add);
-                console.log("add.__kova_fn__:", mod.exports.add?.__kova_fn__);
+                // unwrap ExportStatements so buildGraph sees the raw declarations
+                const unwrapped = mod.ast.body.map(n =>
+                    n.type === "ExportStatement" ? n.declaration : n
+                );
+                this.importedASTs.push(...unwrapped);
+                this.importedASTs.push(...mod.importedASTs);
+
                 node.specifiers.forEach(spec => {
                     if (!(spec in mod.exports)) throw new RuntimeError(
                         `Module "${node.source}" does not export "${spec}"`

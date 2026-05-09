@@ -1,0 +1,5 @@
+let greeting = "Hello"
+
+export fn greet(name) {
+    return greeting + " " + name
+}

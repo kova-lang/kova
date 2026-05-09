@@ -723,7 +723,7 @@ test("unknown string method throws", () => {
     assertThrows(() => runKovaSync(`let s = "hi"\ns.explode()`), "no method");
 });
 test("assign to undeclared throws", () => {
-    assertThrows(() => runKovaSync(`x = 5`), "undeclared");
+    assertThrows(() => runKovaSync(`x = 5`), "Undeclared");
 });
 test("infinite loop guard triggers", () => {
     assertThrows(() => runKovaSync(`let i = 0\nwhile i < 1 { let x = 1 }`), "Infinite loop");

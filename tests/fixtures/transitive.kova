@@ -1,0 +1,5 @@
+import { add } from "./math.kova"
+
+export fn addTen(x) {
+    return add(x, 10)
+}

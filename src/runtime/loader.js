@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { RuntimeError } from "../core/diagnostic.js";
-import  Lexer  from "../lexer/lexer.js";
-import  Parser  from "../parser/parser.js";
-import  SemanticAnalyzer  from "../semantic/semanticAnalyzer.js";
-import  Interpreter  from "../interpreter/interpreter.js";
+import Lexer from "../lexer/lexer.js";
+import Parser from "../parser/parser.js";
+import SemanticAnalyzer from "../semantic/semanticAnalyzer.js";
+import Interpreter from "../interpreter/interpreter.js";
 
 // Cache: absolutePath -> export map
 const moduleCache = new Map();
@@ -44,21 +44,24 @@ export async function loadModule(importPath, importerPath, externals, signatures
         );
     }
 
-    const lexer  = new Lexer(source);
+    const lexer = new Lexer(source);
     const tokens = lexer.tokenize();
 
     const parser = new Parser();
-    const ast    = parser.parseProgram(tokens);
+    const ast = parser.parseProgram(tokens);
 
     const semantic = new SemanticAnalyzer(source, externals, signatures);
     semantic.analyze(ast);
 
     const interpreter = new Interpreter(externals);
+    interpreter.filePath = absolutePath;
+    interpreter.signatures = signatures;
     await interpreter.interpret(ast);
 
     const result = {
         exports: interpreter.exportMap ?? {},
         ast,
+        importedASTs: interpreter.importedASTs ?? [],
     };
 
     moduleCache.set(absolutePath, result);
