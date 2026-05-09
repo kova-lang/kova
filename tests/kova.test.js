@@ -105,6 +105,140 @@ test("nested object", () => eq(runKovaSync(`let o = { inner: { val: 7 } }  retur
 test("compound +=", () => eq(runKovaSync(`let x = 5\nx += 3\nreturn x`).returnValue, 8));
 test("member +=", () => eq(runKovaSync(`let o = { x: 5 }\no.x += 10\nreturn o.x`).returnValue, 15));
 
+// #### Array Methods ####
+console.log("\n Array Methods");
+test("map doubles elements", () => {
+    const r = runKovaSync(`
+let arr = [1, 2, 3]
+let doubled = arr.map((x) => { return x * 2 })
+return doubled[1]`);
+    eq(r.returnValue, 4);
+});
+test("filter keeps matching elements", () => {
+    const r = runKovaSync(`
+let arr = [1, 2, 3, 4, 5]
+let evens = arr.filter((x) => { return x % 2 == 0 })
+return evens[0]`);
+    eq(r.returnValue, 2);
+});
+test("find returns first match", () => {
+    const r = runKovaSync(`
+let arr = [1, 2, 3, 4]
+let found = arr.find((x) => { return x > 2 })
+return found`);
+    eq(r.returnValue, 3);
+});
+test("includes returns true", () => {
+    const r = runKovaSync(`let arr = [1, 2, 3]\nreturn arr.includes(2)`);
+    eq(r.returnValue, true);
+});
+test("includes returns false", () => {
+    const r = runKovaSync(`let arr = [1, 2, 3]\nreturn arr.includes(9)`);
+    eq(r.returnValue, false);
+});
+test("indexOf returns correct index", () => {
+    const r = runKovaSync(`let arr = [10, 20, 30]\nreturn arr.indexOf(20)`);
+    eq(r.returnValue, 1);
+});
+test("join concatenates with separator", () => {
+    const r = runKovaSync(`let arr = ["a", "b", "c"]\nreturn arr.join("-")`);
+    eq(r.returnValue, "a-b-c");
+});
+test("slice returns subarray", () => {
+    const r = runKovaSync(`let arr = [1, 2, 3, 4, 5]\nreturn arr.slice(1, 3)`);
+    const v = r.returnValue;
+    assert(Array.isArray(v) && v[0] === 2 && v[1] === 3, `Expected [2,3] got ${JSON.stringify(v)}`);
+});
+test("reverse reverses array", () => {
+    const r = runKovaSync(`let arr = [1, 2, 3]\narr.reverse()\nreturn arr[0]`);
+    eq(r.returnValue, 3);
+});
+test("pop removes last element", () => {
+    const r = runKovaSync(`let arr = [1, 2, 3]\nlet last = arr.pop()\nreturn last`);
+    eq(r.returnValue, 3);
+});
+test("shift removes first element", () => {
+    const r = runKovaSync(`let arr = [1, 2, 3]\nlet first = arr.shift()\nreturn first`);
+    eq(r.returnValue, 1);
+});
+
+// #### String Methods ####
+console.log("\n String Methods");
+test("toUpperCase", () => eq(runKovaSync(`return "hello".toUpperCase()`).returnValue, "HELLO"));
+test("toLowerCase", () => eq(runKovaSync(`return "HELLO".toLowerCase()`).returnValue, "hello"));
+test("trim removes whitespace", () => eq(runKovaSync(`return "  hi  ".trim()`).returnValue, "hi"));
+test("split produces array", () => {
+    const r = runKovaSync(`let parts = "a,b,c".split(",")\nreturn parts[1]`);
+    eq(r.returnValue, "b");
+});
+test("includes substring true", () => eq(runKovaSync(`return "hello world".includes("world")`).returnValue, true));
+test("includes substring false", () => eq(runKovaSync(`return "hello world".includes("xyz")`).returnValue, false));
+test("startsWith", () => eq(runKovaSync(`return "hello".startsWith("hel")`).returnValue, true));
+test("endsWith", () => eq(runKovaSync(`return "hello".endsWith("llo")`).returnValue, true));
+test("replace substitutes first match", () => eq(runKovaSync(`return "hello world".replace("world", "kova")`).returnValue, "hello kova"));
+test("slice extracts substring", () => eq(runKovaSync(`return "hello".slice(1, 3)`).returnValue, "el"));
+test("indexOf finds char position", () => eq(runKovaSync(`return "hello".indexOf("l")`).returnValue, 2));
+test("length of string", () => eq(runKovaSync(`return "hello".length`).returnValue, 5));
+
+// #### Builtins ####
+console.log("\n Builtins");
+test("abs of negative", () => eq(runKovaSync(`return abs(-5)`).returnValue, 5));
+test("sqrt", () => eq(runKovaSync(`return sqrt(9)`).returnValue, 3));
+test("floor", () => eq(runKovaSync(`return floor(3.9)`).returnValue, 3));
+test("ceil", () => eq(runKovaSync(`return ceil(3.1)`).returnValue, 4));
+test("round down", () => eq(runKovaSync(`return round(3.4)`).returnValue, 3));
+test("round up", () => eq(runKovaSync(`return round(3.5)`).returnValue, 4));
+test("pow", () => eq(runKovaSync(`return pow(2, 8)`).returnValue, 256));
+test("max", () => eq(runKovaSync(`return max(1, 9, 3)`).returnValue, 9));
+test("min", () => eq(runKovaSync(`return min(1, 9, 3)`).returnValue, 1));
+test("random returns number between 0 and 1", () => {
+    const r = runKovaSync(`return random()`);
+    assert(typeof r.returnValue === "number" && r.returnValue >= 0 && r.returnValue < 1, "random out of range");
+});
+test("keys returns object keys", () => {
+    const r = runKovaSync(`let o = { a: 1, b: 2 }\nreturn keys(o)`);
+    assert(Array.isArray(r.returnValue) && r.returnValue.includes("a"), "keys missing 'a'");
+});
+test("values returns object values", () => {
+    const r = runKovaSync(`let o = { a: 1, b: 2 }\nreturn values(o)`);
+    assert(Array.isArray(r.returnValue) && r.returnValue.includes(1), "values missing 1");
+});
+test("flat flattens one level", () => {
+    const r = runKovaSync(`let arr = [[1,2],[3,4]]\nreturn flat(arr)`);
+    assert(Array.isArray(r.returnValue) && r.returnValue[2] === 3, "flat failed");
+});
+test("unique removes duplicates", () => {
+    const r = runKovaSync(`let arr = [1, 2, 2, 3, 3]\nreturn unique(arr)`);
+    assert(r.returnValue.length === 3, `expected 3 unique values got ${r.returnValue.length}`);
+});
+test("sort sorts array", () => {
+    const r = runKovaSync(`let arr = [3, 1, 2]\nreturn sort(arr)`);
+    eq(r.returnValue[0], 1);
+});
+test("toJSON serializes object", () => {
+    const r = runKovaSync(`let o = { x: 1 }\nreturn toJSON(o)`);
+    eq(r.returnValue, '{"x":1}');
+});
+test("parseJSON deserializes string", () => {
+    const r = runKovaSync(`let s = '{"x":1}'\nlet o = parseJSON(s)\nreturn o.x`);
+    eq(r.returnValue, 1);
+});
+test("toString converts number", () => eq(runKovaSync(`return toString(42)`).returnValue, "42"));
+test("toNumber converts string", () => eq(runKovaSync(`return toNumber("42")`).returnValue, 42));
+test("now returns a number", () => {
+    const r = runKovaSync(`return now()`);
+    assert(typeof r.returnValue === "number" && r.returnValue > 0, "now() should return positive number");
+});
+test("isoDate returns ISO string", () => {
+    const r = runKovaSync(`return isoDate()`);
+    assert(typeof r.returnValue === "string" && r.returnValue.includes("T"), "isoDate format wrong");
+});
+test("len of array", () => eq(runKovaSync(`return len([1,2,3])`).returnValue, 3));
+test("len of string", () => eq(runKovaSync(`return len("hello")`).returnValue, 5));
+test("range produces correct array", () => {
+    const r = runKovaSync(`let arr = range(0, 3)\nreturn arr[2]`);
+    eq(r.returnValue, 2);
+});
 
 // #### HTTP – Basic ####
 console.log("\n HTTP – Basic");
@@ -494,6 +628,44 @@ console.log(`${"####".repeat(56)}\n`);
 
 // #### IMPORT — Async ####
 console.log("\n IMPORT — Async");
+await testAsync("transitive import: module imports module", async () => {
+    const r = await runKova(
+        `import { addTen } from "./tests/fixtures/transitive.kova"\nreturn addTen(5)`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    eq(r.returnValue, 15);
+});
+await testAsync("imported fn closes over module-level let", async () => {
+    const r = await runKova(
+        `import { greet } from "./tests/fixtures/greet.kova"\nreturn greet("Kova")`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    eq(r.returnValue, "Hello Kova");
+});
+await testAsync("imported module fn_def appears in merged graph", async () => {
+    const r = await runKova(
+        `import { add } from "./tests/fixtures/math.kova"\nreturn add(1, 2)`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    assert(
+        r.graph.json.nodes.some(n => n.kind === "fn_def" && n.label.includes("add")),
+        "fn_def for imported add not in graph"
+    );
+});
+await testAsync("same module imported twice uses cache", async () => {
+    const r = await runKova(
+        `import { add } from "./tests/fixtures/math.kova"
+import { PI } from "./tests/fixtures/math.kova"
+return add(1, 1) + PI`,
+        {}, {},
+        { filePath: resolve(process.cwd(), "entry.kova"), aiMode: "stub" }
+    );
+    assert(typeof r.returnValue === "number", "should return a number");
+});
+
 await testAsync("named import: loads exported fn from fixture", async () => {
     const r = await runKova(
         `import { add } from "./tests/fixtures/math.kova"\nreturn add(3, 4)`,
@@ -537,6 +709,24 @@ await testAsync("import throws on missing file", async () => {
         ),
         "Cannot find module"
     );
+});
+
+// #### Error Cases ####
+console.log("\n Error Cases");
+test("access property on null throws", () => {
+    assertThrows(() => runKovaSync(`let x = null\nreturn x.foo`), "null");
+});
+test("unknown array method throws", () => {
+    assertThrows(() => runKovaSync(`let a = [1,2]\na.explode()`), "no method");
+});
+test("unknown string method throws", () => {
+    assertThrows(() => runKovaSync(`let s = "hi"\ns.explode()`), "no method");
+});
+test("assign to undeclared throws", () => {
+    assertThrows(() => runKovaSync(`x = 5`), "undeclared");
+});
+test("infinite loop guard triggers", () => {
+    assertThrows(() => runKovaSync(`let i = 0\nwhile i < 1 { let x = 1 }`), "Infinite loop");
 });
 
 // #### AI Integration (Prob<T>) — Async ####
