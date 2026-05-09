@@ -1,0 +1,177 @@
+// fraud-detection.kova — Real-time Transaction Fraud Detection
+//
+// Scores an incoming payment transaction across five
+// independent dimensions simultaneously. Because each AI()
+// call produces a Prob<T> without depending on the others,
+// the execution graph identifies all five as parallel
+// candidates — a core advantage of Kova's explicit graph model.
+//
+// Dimensions scored:
+//   1. Velocity      — is the transaction frequency unusual?
+//   2. Geography     — does the location match the customer profile?
+//   3. Merchant      — is this a known high-risk merchant category?
+//   4. Behaviour     — does the amount pattern match the customer history?
+//   5. Device        — is the device fingerprint consistent?
+//
+// After scoring, a final AI call synthesises all signals into
+// an overall risk decision.
+//
+// Run: kova run examples/fraud-detection.kova --graph
+
+connect postgres using {
+    host:     ENV.DB_HOST,
+    database: "fraud"
+}
+
+// ---- Incoming transaction ----
+let transaction = {
+    txId:       "tx_998821",
+    customerId: "cust_441",
+    amount:     4299.00,
+    currency:   "USD",
+    merchant:   "Electronics Wholesale Ltd",
+    category:   "electronics",
+    country:    "NG",
+    city:       "Lagos",
+    device:     "Mozilla/5.0 Chrome/124 unknown device",
+    timestamp:  "2025-05-09T03:14:00Z",
+    history: {
+        avgAmount:    87.50,
+        txLast30Days: 42,
+        homeCountry:  "US",
+        knownDevices: 2
+    }
+}
+
+// ---- Fetch recent transactions for velocity check ----
+find transactions where {
+    customerId: transaction.customerId
+} limit 20 into recentTx
+
+// ---- Five parallel AI scoring calls ----
+// All five produce Prob<T> independently — no data dependency between them.
+// The execution graph will flag all five as parallel candidates.
+let probVelocity  = AI("is the transaction frequency suspicious given the history? reply with exactly one lowercase word: normal or suspicious", recentTx)
+let probGeo       = AI("is this transaction location consistent with the customer profile? reply with exactly one lowercase word: consistent or inconsistent", transaction)
+let probMerchant  = AI("is this merchant category high risk for fraud? reply with exactly one lowercase word: low, medium, or high", transaction.category)
+let probBehaviour = AI("does this transaction amount match the customer spending pattern? reply with exactly one lowercase word: normal or anomalous", transaction)
+let probDevice    = AI("is this device fingerprint suspicious? reply with exactly one lowercase word: trusted or suspicious", transaction.device)
+
+// ---- Resolve and normalise all signals ----
+let velocityRaw  = resolve(probVelocity)
+let geoRaw       = resolve(probGeo)
+let merchantRaw  = resolve(probMerchant)
+let behaviourRaw = resolve(probBehaviour)
+let deviceRaw    = resolve(probDevice)
+
+let velocity  = velocityRaw.toLowerCase()
+let geo       = geoRaw.toLowerCase()
+let merchant  = merchantRaw.toLowerCase()
+let behaviour = behaviourRaw.toLowerCase()
+let device    = deviceRaw.toLowerCase()
+
+print("Velocity:   " + velocity)
+print("Geography:  " + geo)
+print("Merchant:   " + merchant)
+print("Behaviour:  " + behaviour)
+print("Device:     " + device)
+
+// ---- Synthesise final risk decision ----
+let signals = {
+    velocity:  velocity,
+    geo:       geo,
+    merchant:  merchant,
+    behaviour: behaviour,
+    device:    device,
+    amount:    transaction.amount,
+    avgAmount: transaction.history.avgAmount
+}
+
+let probDecision = AI(
+    "given these fraud signals, decide the outcome. reply with exactly one lowercase word: approve, review, or block",
+    signals
+)
+let decisionRaw = resolve(probDecision)
+let decision    = decisionRaw.toLowerCase()
+
+print("Decision:   " + decision)
+
+// ---- Persist the scoring result ----
+insert into fraud_scores {
+    txId:       transaction.txId,
+    customerId: transaction.customerId,
+    velocity:   velocity,
+    geo:        geo,
+    merchant:   merchant,
+    behaviour:  behaviour,
+    device:     device,
+    decision:   decision,
+    amount:     transaction.amount
+} into scoreRecord
+
+print("Score ref:  " + scoreRecord.insertedId)
+
+// ---- Route based on decision ----
+if decision == "block" {
+    POST "https://payments.internal/block" save {
+        txId:   transaction.txId,
+        reason: "fraud detection"
+    } into blockResult
+
+    print("Routed to: block")
+
+    respond {
+        status: 403,
+        body: {
+            txId:     transaction.txId,
+            decision: "blocked",
+            signals: {
+                velocity:  velocity,
+                geo:       geo,
+                merchant:  merchant,
+                behaviour: behaviour,
+                device:    device
+            },
+            ref: scoreRecord.insertedId
+        }
+    }
+}
+
+if decision == "review" {
+    POST "https://ops.internal/review-queue" save {
+        txId:       transaction.txId,
+        customerId: transaction.customerId,
+        signals:    signals,
+        amount:     transaction.amount
+    } into reviewResult
+
+    print("Routed to: review queue")
+
+    respond {
+        status: 202,
+        body: {
+            txId:     transaction.txId,
+            decision: "under review",
+            eta:      "2-4 hours",
+            ref:      scoreRecord.insertedId
+        }
+    }
+}
+
+print("Routed to: approve")
+
+respond {
+    status: 200,
+    body: {
+        txId:     transaction.txId,
+        decision: decision,
+        signals: {
+            velocity:  velocity,
+            geo:       geo,
+            merchant:  merchant,
+            behaviour: behaviour,
+            device:    device
+        },
+        ref: scoreRecord.insertedId
+    }
+}
