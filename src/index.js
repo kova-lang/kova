@@ -53,7 +53,11 @@ export async function runKova(code, externals = {}, externalSignatures = {}, opt
         interpreter.signatures = allSignatures;
         const result = await interpreter.interpret(ast);
 
-        const { graph, graphInstance } = buildGraph(ast);
+        const mergedAST = {
+            ...ast,
+            body: [...interpreter.importedASTs, ...ast.body],
+        };
+        const { graph, graphInstance } = buildGraph(mergedAST);
 
         return {
             ...result,

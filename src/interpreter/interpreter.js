@@ -15,6 +15,7 @@ export default class Interpreter {
         this.filePath = null;
         this.signatures = {};
         this.respondValue = undefined;
+        this.importedASTs = [];
 
         this._builtins = Object.assign(Object.create(null), {
             print: (...args) => {
@@ -259,6 +260,7 @@ export default class Interpreter {
                     `Cannot resolve import "${node.source}": interpreter has no filePath`
                 );
                 const mod = await loadModule(node.source, this.filePath, this.externals, this.signatures);
+                this.importedASTs.push(...mod.ast.body);
                 console.log("mod.exports:", JSON.stringify(Object.keys(mod.exports)));
                 console.log("add value type:", typeof mod.exports.add);
                 console.log("add.__kova_fn__:", mod.exports.add?.__kova_fn__);

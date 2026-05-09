@@ -59,7 +59,6 @@ test("unary neg", () => eq(runKovaSync(`return -5`).returnValue, -5));
 test("string concat", () => eq(runKovaSync(`return "hello" + " world"`).returnValue, "hello world"));
 test("div by zero throws", () => assertThrows(() => runKovaSync(`return 10 / 0`), "Division by zero"));
 test("exp", () => eq(runKovaSync(`return 2**2`).returnValue, 4));
-
 // #### Comparison & Logical ####
 console.log("\n Comparison & Logical");
 test("gt", () => eq(runKovaSync(`return 5 > 3`).returnValue, true));
@@ -598,6 +597,9 @@ respond { status: 200, body: { tag: tag, count: 10 } }`, {}, {}, { aiMode: "stub
     assert(r.graph.json.nodes.some(n => n.kind === "resolve_prob"), "No resolve_prob node");
 });
 
+// console.log("=======> Quick test for unary before exp expressions",runKovaSync(` let x = -2**310
+//     print(x)
+// `))
 
 // #### Final Results ####
 console.log(`\n${"####".repeat(56)}`);
