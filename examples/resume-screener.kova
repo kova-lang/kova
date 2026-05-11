@@ -1,0 +1,163 @@
+// resume-screener.kova — Automated Resume Screening Pipeline
+//
+// Screens a candidate resume for a software engineering role.
+// Shows Kova handling document intelligence with structured
+// AI outputs, conditional routing, and DB persistence.
+//
+// Pipeline steps:
+//   1. Fetch the job requirements from internal API
+//   2. Score the resume across four dimensions in parallel
+//   3. Synthesise a hiring recommendation
+//   4. Route to the correct HR queue
+//   5. Send candidate notification
+//
+// Run: kova run examples/resume-screener.kova --graph
+
+connect postgres using {
+    host:     ENV.DB_HOST,
+    database: "hr"
+}
+
+// ---- Fetch job requirements ----
+GET "https://hr.internal/jobs/eng-senior-backend" into jobSpec
+
+// ---- Candidate resume ----
+let resume = {
+    candidateId: "cand_2291",
+    name:        "Amara Osei",
+    email:       "amara@example.com",
+    experience:  "7 years backend engineering. Led infrastructure migration at fintech startup. Built distributed systems handling 50k req/s. Strong Go, Rust, and PostgreSQL. Some ML pipeline experience. Open source contributor.",
+    education:   "BSc Computer Science, University of Ghana. Self-directed study in distributed systems and compilers.",
+    skills:      ["Go", "Rust", "PostgreSQL", "Kafka", "Docker", "Kubernetes"],
+    projects:    "Built a query planner for a columnar database. Contributed to an open source key-value store in Rust."
+}
+
+// ---- Four parallel scoring dimensions ----
+let probSkills      = AI("does this resume match the job requirements for technical skills? rate: weak, moderate, strong. one word", resume)
+let probExperience  = AI("does the candidate experience level match a senior backend role? rate: junior, mid, senior. one word", resume)
+let probCulture     = AI("does this candidate profile suggest strong engineering culture fit? reply: low, medium, high. one word", resume)
+let probRed         = AI("are there any red flags in this resume? reply: none, minor, major. one word", resume)
+
+// ---- Resolve scores ----
+let skillScore    = resolve(probSkills)
+let expLevel      = resolve(probExperience)
+let cultureScore  = resolve(probCulture)
+let redFlags      = resolve(probRed)
+
+print("Skills:      " + skillScore)
+print("Experience:  " + expLevel)
+print("Culture fit: " + cultureScore)
+print("Red flags:   " + redFlags)
+
+// ---- Hard reject on major red flags ----
+if redFlags == "major" {
+    insert into screened_candidates {
+        candidateId:  resume.candidateId,
+        name:         resume.name,
+        decision:     "rejected",
+        reason:       "major red flags detected",
+        skillScore:   skillScore,
+        expLevel:     expLevel,
+        cultureScore: cultureScore,
+        redFlags:     redFlags
+    } into rejection
+
+    POST "https://hr.internal/notifications/candidate" save {
+        candidateId: resume.candidateId,
+        email:       resume.email,
+        decision:    "not moving forward",
+        jobId:       "eng-senior-backend"
+    } into notif
+
+    respond {
+        status: 200,
+        body: {
+            candidateId: resume.candidateId,
+            decision:    "rejected",
+            reason:      "major red flags",
+            ref:         rejection.insertedId
+        }
+    }
+}
+
+// ---- Synthesise recommendation ----
+let scoreSummary = {
+    skills:   skillScore,
+    exp:      expLevel,
+    culture:  cultureScore,
+    redFlags: redFlags,
+    jobSpec:  jobSpec
+}
+
+let probRecommendation = AI(
+    "given these screening scores and job spec, recommend: hire, interview, waitlist, or reject. one word only",
+    scoreSummary
+)
+let recommendation = resolve(probRecommendation)
+print("Recommendation: " + recommendation)
+
+// ---- Persist screening result ----
+insert into screened_candidates {
+    candidateId:    resume.candidateId,
+    name:           resume.name,
+    email:          resume.email,
+    decision:       recommendation,
+    skillScore:     skillScore,
+    expLevel:       expLevel,
+    cultureScore:   cultureScore,
+    redFlags:       redFlags,
+    jobId:          "eng-senior-backend"
+} into screenResult
+
+// ---- Route to correct HR queue ----
+if recommendation == "hire" {
+    POST "https://hr.internal/queues/fast-track" save {
+        candidateId: resume.candidateId,
+        name:        resume.name,
+        ref:         screenResult.insertedId
+    } into queueResult
+    print("Fast-tracked to hire queue")
+}
+
+if recommendation == "interview" {
+    POST "https://hr.internal/queues/interview" save {
+        candidateId: resume.candidateId,
+        name:        resume.name,
+        ref:         screenResult.insertedId
+    } into queueResult
+    print("Added to interview queue")
+}
+
+if recommendation == "waitlist" {
+    POST "https://hr.internal/queues/waitlist" save {
+        candidateId: resume.candidateId,
+        name:        resume.name,
+        ref:         screenResult.insertedId
+    } into queueResult
+    print("Added to waitlist")
+}
+
+// ---- Notify candidate ----
+POST "https://hr.internal/notifications/candidate" save {
+    candidateId: resume.candidateId,
+    email:       resume.email,
+    decision:    recommendation,
+    jobId:       "eng-senior-backend"
+} into candidateNotif
+
+respond {
+    status: 200,
+    body: {
+        candidateId:    resume.candidateId,
+        name:           resume.name,
+        recommendation: recommendation,
+        scores: {
+            skills:   skillScore,
+            exp:      expLevel,
+            culture:  cultureScore,
+            redFlags: redFlags
+        },
+        notified: candidateNotif.ok,
+        ref:      screenResult.insertedId
+    }
+}

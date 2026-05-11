@@ -1,0 +1,165 @@
+// news-digest.kova — Personalised News Digest Builder
+//
+// Fetches articles from multiple sources, classifies and
+// summarises each one, scores relevance against a user
+// interest profile, and builds a structured daily digest.
+//
+// Shows Kova's strength in data transformation pipelines:
+// fetching external data, running per-item AI analysis,
+// filtering by score, and assembling a final structured output.
+//
+// Pipeline steps:
+//   1. Fetch articles from three news sources
+//   2. Classify topic and sentiment for each article
+//   3. Score relevance against user interest profile
+//   4. Summarise only relevant articles
+//   5. Detect duplicate coverage across sources
+//   6. Assemble and persist the final digest
+//   7. Deliver to the user
+//
+// Run: kova run examples/news-digest.kova --graph
+
+connect postgres using {
+    host:     ENV.DB_HOST,
+    database: "digest"
+}
+
+// ---- User interest profile ----
+let userProfile = {
+    userId:    "user_1142",
+    email:     "dev@example.com",
+    interests: ["artificial intelligence", "programming languages", "distributed systems", "startups"],
+    language:  "en",
+    maxItems:  5
+}
+
+// ---- Fetch articles from three sources in parallel ----
+GET "https://feeds.internal/techcrunch/latest?limit=5"  into tcArticles
+GET "https://feeds.internal/hackernews/latest?limit=5"  into hnArticles
+GET "https://feeds.internal/arxiv/cs-ai/latest?limit=3" into arxivArticles
+
+print("Fetched TechCrunch:   " + tcArticles.ok)
+print("Fetched HackerNews:   " + hnArticles.ok)
+print("Fetched Arxiv:        " + arxivArticles.ok)
+
+// ---- Classify and score TechCrunch articles ----
+let probTcTopic     = AI("classify the dominant topic of these tech articles in one word: ai, crypto, startups, policy, hardware, software, or other", tcArticles)
+let probTcRelevance = AI("score relevance of these articles to this user interest profile. reply: low, medium, or high. one word", tcArticles)
+let probTcSentiment = AI("what is the overall sentiment of these articles: positive, negative, or neutral. one word", tcArticles)
+
+let tcTopic     = resolve(probTcTopic)
+let tcRelevance = resolve(probTcRelevance)
+let tcSentiment = resolve(probTcSentiment)
+
+print("TechCrunch — Topic: " + tcTopic + " | Relevance: " + tcRelevance + " | Sentiment: " + tcSentiment)
+
+// ---- Classify and score HackerNews articles ----
+let probHnTopic     = AI("classify the dominant topic of these tech articles in one word: ai, crypto, startups, policy, hardware, software, or other", hnArticles)
+let probHnRelevance = AI("score relevance of these articles to this user interest profile. reply: low, medium, or high. one word", hnArticles)
+let probHnSentiment = AI("what is the overall sentiment of these articles: positive, negative, or neutral. one word", hnArticles)
+
+let hnTopic     = resolve(probHnTopic)
+let hnRelevance = resolve(probHnRelevance)
+let hnSentiment = resolve(probHnSentiment)
+
+print("HackerNews — Topic: " + hnTopic + " | Relevance: " + hnRelevance + " | Sentiment: " + hnSentiment)
+
+// ---- Classify and score Arxiv papers ----
+let probArxivTopic     = AI("classify the dominant topic of these AI research papers in one word: llm, vision, rl, systems, theory, or other", arxivArticles)
+let probArxivRelevance = AI("score relevance of these papers to this user interest profile. reply: low, medium, or high. one word", arxivArticles)
+
+let arxivTopic     = resolve(probArxivTopic)
+let arxivRelevance = resolve(probArxivRelevance)
+
+print("Arxiv — Topic: " + arxivTopic + " | Relevance: " + arxivRelevance)
+
+// ---- Summarise high-relevance sources ----
+let tcSummary     = "[skipped]"
+let hnSummary     = "[skipped]"
+let arxivSummary  = "[skipped]"
+
+if tcRelevance == "high" {
+    let probTcSummary = AI("summarise these articles into 2-3 bullet points. be concise and factual", tcArticles)
+    tcSummary = resolve(probTcSummary)
+}
+
+if hnRelevance == "high" {
+    let probHnSummary = AI("summarise these articles into 2-3 bullet points. be concise and factual", hnArticles)
+    hnSummary = resolve(probHnSummary)
+}
+
+if arxivRelevance == "high" {
+    let probArxivSummary = AI("summarise these research papers into 2-3 bullet points. be concise and technical", arxivArticles)
+    arxivSummary = resolve(probArxivSummary)
+}
+
+// ---- Detect duplicate coverage ----
+let allSources = {
+    techcrunch: tcArticles,
+    hackernews: hnArticles,
+    arxiv:      arxivArticles
+}
+
+let probDuplicates = AI(
+    "are any of these news sources covering the same story? reply: none, some, or many. one word",
+    allSources
+)
+let duplicateCoverage = resolve(probDuplicates)
+print("Duplicate coverage: " + duplicateCoverage)
+
+// ---- Assemble the digest ----
+let digest = {
+    userId:    userProfile.userId,
+    date:      isoDate(),
+    sources: {
+        techcrunch: {
+            topic:     tcTopic,
+            relevance: tcRelevance,
+            sentiment: tcSentiment,
+            summary:   tcSummary
+        },
+        hackernews: {
+            topic:     hnTopic,
+            relevance: hnRelevance,
+            sentiment: hnSentiment,
+            summary:   hnSummary
+        },
+        arxiv: {
+            topic:     arxivTopic,
+            relevance: arxivRelevance,
+            summary:   arxivSummary
+        }
+    },
+    duplicateCoverage: duplicateCoverage,
+    generatedAt:       isoDate()
+}
+
+// ---- Persist digest ----
+insert into digests {
+    userId:    userProfile.userId,
+    date:      digest.date,
+    sources:   digest.sources,
+    duplicates: duplicateCoverage
+} into savedDigest
+
+// ---- Deliver to user ----
+POST "https://email.internal/send" save {
+    to:      userProfile.email,
+    subject: "Your daily digest — " + digest.date,
+    digest:  digest
+} into delivery
+
+print("Digest delivered: " + delivery.ok)
+print("Digest ref:       " + savedDigest.insertedId)
+
+respond {
+    status: 200,
+    body: {
+        userId:     userProfile.userId,
+        digestId:   savedDigest.insertedId,
+        delivered:  delivery.ok,
+        sources:    3,
+        duplicates: duplicateCoverage,
+        date:       digest.date
+    }
+}

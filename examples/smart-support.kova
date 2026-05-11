@@ -1,0 +1,180 @@
+// smart-support.kova — Customer Support Ticket Router
+//
+// Classifies an incoming support ticket and routes it to
+// the correct team with priority assignment and SLA tagging.
+// Shows Kova's conditional routing depth and DB write patterns.
+//
+// Pipeline steps:
+//   1. Classify ticket type, urgency, sentiment, and product area
+//   2. Detect if the ticket is a duplicate
+//   3. Assign SLA based on urgency and tier
+//   4. Route to the correct support queue
+//   5. Auto-draft an acknowledgement response
+//   6. Persist everything and notify the customer
+//
+// Run: kova run examples/smart-support.kova --graph
+
+connect mysql using {
+    host:     ENV.DB_HOST,
+    database: "support"
+}
+
+// ---- Incoming ticket ----
+let ticket = {
+    ticketId:   "tkt_44821",
+    customerId: "cust_991",
+    email:      "lola@example.com",
+    tier:       "enterprise",
+    subject:    "API returning 500 errors intermittently in production",
+    body:       "Since yesterday around 18:00 UTC our integration has been receiving sporadic 500 errors from your /v2/process endpoint. This is affecting roughly 15% of our requests and causing downstream failures in our payment pipeline. We need urgent resolution. This is a production issue.",
+    product:    "API",
+    plan:       "enterprise"
+}
+
+// ---- Classify ticket across four dimensions in parallel ----
+let probType      = AI("classify support ticket type as: bug, billing, feature-request, account, or general. one word", ticket.body)
+let probUrgency   = AI("classify urgency as: low, medium, high, or critical. one word. production issues are critical", ticket.body)
+let probSentiment = AI("classify customer sentiment as: neutral, frustrated, angry, or satisfied. one word", ticket.body)
+let probArea      = AI("which product area does this ticket concern: api, dashboard, billing, auth, or general. one word", ticket.body)
+
+let ticketType  = resolve(probType)
+let urgency     = resolve(probUrgency)
+let sentiment   = resolve(probSentiment)
+let area        = resolve(probArea)
+
+print("Type:      " + ticketType)
+print("Urgency:   " + urgency)
+print("Sentiment: " + sentiment)
+print("Area:      " + area)
+
+// ---- Check for duplicates ----
+find tickets where {
+    customerId: ticket.customerId,
+    area:       area,
+    status:     "open"
+} limit 5 into existingTickets
+
+// ---- Assign SLA based on urgency and customer tier ----
+let slaHours = 24
+
+if urgency == "critical" {
+    if ticket.tier == "enterprise" {
+        slaHours = 1
+    }
+    if ticket.tier == "pro" {
+        slaHours = 4
+    }
+    if ticket.tier == "free" {
+        slaHours = 8
+    }
+}
+
+if urgency == "high" {
+    if ticket.tier == "enterprise" {
+        slaHours = 4
+    }
+    if ticket.tier == "pro" {
+        slaHours = 8
+    }
+}
+
+if urgency == "medium" {
+    slaHours = 24
+}
+
+print("SLA: " + slaHours + " hours")
+
+// ---- Auto-draft acknowledgement ----
+let draftContext = {
+    customerName: "Lola",
+    ticketId:     ticket.ticketId,
+    urgency:      urgency,
+    slaHours:     slaHours,
+    area:         area
+}
+
+let probDraft = AI(
+    "write a brief professional support acknowledgement email. mention the ticket ID, SLA, and that the team is investigating. 2-3 sentences only",
+    draftContext
+)
+let draftReply = resolve(probDraft)
+print("Draft reply: " + draftReply)
+
+// ---- Persist ticket ----
+insert into tickets {
+    ticketId:   ticket.ticketId,
+    customerId: ticket.customerId,
+    email:      ticket.email,
+    subject:    ticket.subject,
+    body:       ticket.body,
+    type:       ticketType,
+    urgency:    urgency,
+    sentiment:  sentiment,
+    area:       area,
+    slaHours:   slaHours,
+    tier:       ticket.tier,
+    status:     "open",
+    draftReply: draftReply
+} into savedTicket
+
+// ---- Route to correct queue ----
+if urgency == "critical" {
+    POST "https://support.internal/queues/oncall" save {
+        ticketId:  ticket.ticketId,
+        area:      area,
+        tier:      ticket.tier,
+        slaHours:  slaHours,
+        ref:       savedTicket.insertedId
+    } into routeResult
+    print("Routed to on-call queue")
+}
+
+if urgency == "high" {
+    POST "https://support.internal/queues/priority" save {
+        ticketId:  ticket.ticketId,
+        area:      area,
+        tier:      ticket.tier,
+        slaHours:  slaHours,
+        ref:       savedTicket.insertedId
+    } into routeResult
+    print("Routed to priority queue")
+}
+
+if urgency == "medium" {
+    POST "https://support.internal/queues/standard" save {
+        ticketId: ticket.ticketId,
+        area:     area,
+        ref:      savedTicket.insertedId
+    } into routeResult
+    print("Routed to standard queue")
+}
+
+if urgency == "low" {
+    POST "https://support.internal/queues/backlog" save {
+        ticketId: ticket.ticketId,
+        area:     area,
+        ref:      savedTicket.insertedId
+    } into routeResult
+    print("Routed to backlog queue")
+}
+
+// ---- Notify customer ----
+POST "https://email.internal/send" save {
+    to:      ticket.email,
+    subject: "Re: " + ticket.subject + " [" + ticket.ticketId + "]",
+    body:    draftReply
+} into emailResult
+
+respond {
+    status: 201,
+    body: {
+        ticketId:  ticket.ticketId,
+        type:      ticketType,
+        urgency:   urgency,
+        sentiment: sentiment,
+        area:      area,
+        slaHours:  slaHours,
+        notified:  emailResult.ok,
+        ref:       savedTicket.insertedId
+    }
+}
