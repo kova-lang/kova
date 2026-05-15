@@ -131,6 +131,8 @@ kova/
 │   │   └── executionGraph.js    Execution graph engine
 │   ├── ai/
 │   │   └── groq.js              Groq AI client + Prob<T> type implementation
+|   ├── runtime/
+│   │   └── loader.js            Module loader
 │   └── core/
 │       └── diagnostic.js        Error formatting
 |
