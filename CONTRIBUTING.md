@@ -27,7 +27,6 @@ All 179 tests should pass. The sentiment example should run in stub mode without
 ---
 
 ## Project Structure
-
 ```
 kova/
 ├── bin/
@@ -46,6 +45,8 @@ kova/
 │   │   └── executionGraph.js    Execution graph engine
 │   ├── ai/
 │   │   └── groq.js              Groq AI client + Prob<T> type implementation
+|   ├── runtime/
+│   │   └── loader.js            Module loader
 │   └── core/
 │       └── diagnostic.js        Error formatting
 |
