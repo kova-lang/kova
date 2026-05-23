@@ -1,3 +1,5 @@
+> [!NOTE]
+> **Status: On Hold (Redesign).** v0.51 is stable and available. Active development is paused while core semantics are being rethought from the ground up.
 # Kova Programming Language
 
 Kova is a lightweight, expressive programming language designed for AI-integrated backend workflows. It features clean syntax, web-native primitives, and a predictable execution model , with one key addition no general-purpose language provides: **AI uncertainty as a first-class type**.
